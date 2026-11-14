@@ -1,0 +1,11 @@
+id = "kson"
+name = "KSON"
+version = "0.0.1"
+schema_version = 1
+authors = ["Elvis Kahoro <elvis@elvis.ai>"]
+description = "KSON language support: language server integration and editing configuration."
+repository = "https://github.com/kson-org/zed-kson"
+
+[language_servers.kson-language-server]
+name = "KSON Language Server"
+languages = ["KSON"]
