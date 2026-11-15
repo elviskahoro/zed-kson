@@ -1,0 +1,20 @@
+{
+  "name": "tree-sitter-kson",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for KSON (kson.org), authored for the zed-kson extension",
+  "main": "bindings/node",
+  "keywords": [
+    "parser",
+    "tree-sitter",
+    "kson"
+  ],
+  "license": "Apache-2.0",
+  "tree-sitter": [
+    {
+      "scope": "source.kson",
+      "file-types": [
+        "kson"
+      ]
+    }
+  ]
+}
