@@ -1,0 +1,898 @@
+====================================================================
+kson readme example: plain format with nesting, embeds, end markers
+====================================================================
+
+# Kson syntax note: whitespace is NOT significant!
+person:
+  name: 'Leonardo Bonacci'
+  nickname: Fibonacci
+  favorite_books:
+    - title: Elements
+      author: Euclid
+
+    - title: Metaphysics
+      author: Aristotle
+      .
+  favorite_numbers:
+    - - 0
+      - 1
+      - 1
+      - 2
+      - '...'
+      =
+    - '(1 + √5)/2'
+    - π
+  # A Kson "embed block" containing Kotlin code
+  favorite_function: %kotlin
+    /**
+     * Calculates the nth number in the Fibonacci sequence using recursion
+     */
+    fun fibonacci(n:
+      Int): Long {
+              if (n < 0) throw IllegalArgumentException("Input must be non-negative")
+              return when (n) {
+              0 -> 0
+              1 -> 1
+              else -> fibonacci(n - 1) + fibonacci(n - 2)
+      }
+  }
+  %%
+
+---
+
+(document
+  (comment)
+  (plain_object
+    (property
+      (unquoted_string)
+      (plain_object
+        (property
+          (unquoted_string)
+          (single_quoted_string))
+        (property
+          (unquoted_string)
+          (unquoted_string))
+        (property
+          (unquoted_string)
+          (dash_list
+            (list_element
+              (list_dash)
+              (plain_object
+                (property
+                  (unquoted_string)
+                  (unquoted_string))
+                (property
+                  (unquoted_string)
+                  (unquoted_string))))
+            (list_element
+              (list_dash)
+              (plain_object
+                (property
+                  (unquoted_string)
+                  (unquoted_string))
+                (property
+                  (unquoted_string)
+                  (unquoted_string))
+                (object_end)))))
+        (property
+          (unquoted_string)
+          (dash_list
+            (list_element
+              (list_dash)
+              (dash_list
+                (list_element
+                  (list_dash)
+                  (number))
+                (list_element
+                  (list_dash)
+                  (number))
+                (list_element
+                  (list_dash)
+                  (number))
+                (list_element
+                  (list_dash)
+                  (number))
+                (list_element
+                  (list_dash)
+                  (single_quoted_string))
+                (list_end)))
+            (list_element
+              (list_dash)
+              (single_quoted_string))
+            (list_element
+              (list_dash)
+              (unquoted_string))))
+        (comment)
+        (property
+          (unquoted_string)
+          (embed_block
+            (embed_tag)
+            (embed_content)))))))
+
+====================================================================
+kson greedy: plain structures absorb every property they can
+====================================================================
+
+a:
+  b: 1
+c: 2
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (plain_object
+        (property
+          (unquoted_string)
+          (number))
+        (property
+          (unquoted_string)
+          (number))))))
+
+====================================================================
+kson end-dot: unnests a property from a nested plain object
+====================================================================
+
+outer_property:
+  nested_property_1: x
+  nested_property_2: y
+  .
+outer_property_2: 'not part of the nested object'
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (plain_object
+        (property
+          (unquoted_string)
+          (unquoted_string))
+        (property
+          (unquoted_string)
+          (unquoted_string))
+        (object_end)))
+    (property
+      (unquoted_string)
+      (single_quoted_string))))
+
+====================================================================
+kson end-dash: unnests an element from a nested plain dash list
+====================================================================
+
+- outer_element
+- - nested_element_1
+  - nested_element_2
+  =
+- outer_element_2
+
+---
+
+(document
+  (dash_list
+    (list_element
+      (list_dash)
+      (unquoted_string))
+    (list_element
+      (list_dash)
+      (dash_list
+        (list_element
+          (list_dash)
+          (unquoted_string))
+        (list_element
+          (list_dash)
+          (unquoted_string))
+        (list_end)))
+    (list_element
+      (list_dash)
+      (unquoted_string))))
+
+====================================================================
+kson natural end: a dash list value ends at the next property
+====================================================================
+
+lucky_numbers:
+  - 7
+  - 13
+lucky_color: blue
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (dash_list
+        (list_element
+          (list_dash)
+          (number))
+        (list_element
+          (list_dash)
+          (number))))
+    (property
+      (unquoted_string)
+      (unquoted_string))))
+
+====================================================================
+kson negative numbers versus list dashes
+====================================================================
+
+- -5
+- - 5
+- -0.5e3
+
+---
+
+(document
+  (dash_list
+    (list_element
+      (list_dash)
+      (number))
+    (list_element
+      (list_dash)
+      (dash_list
+        (list_element
+          (list_dash)
+          (number))
+        (list_element
+          (list_dash)
+          (number))))))
+
+====================================================================
+kson unquoted strings: letters, digits, underscores, dashes, unicode
+====================================================================
+
+an_unqu0t3d_striπg
+---
+
+(document
+  (unquoted_string))
+
+====================================================================
+kson unquoted strings with combining marks
+====================================================================
+
+[हिन्दी, देवनागरी]
+
+---
+
+(document
+  (bracket_list
+    (unquoted_string)
+    (unquoted_string)))
+
+====================================================================
+kson single-quoted strings: raw whitespace, newline, tab, emoji
+====================================================================
+
+'A string with
+a raw newline.
+	Tabs are also A-OK 👌'
+
+---
+
+(document
+  (single_quoted_string))
+
+====================================================================
+kson escapes in single and double quotes
+====================================================================
+
+- 'use slash to escape \'internal\' quotes'
+- "use slash to escape \"internal\" quotes"
+- "backslash \\ and unicode escape \u0041"
+
+---
+
+(document
+  (dash_list
+    (list_element
+      (list_dash)
+      (single_quoted_string
+        (escape_sequence)
+        (escape_sequence)))
+    (list_element
+      (list_dash)
+      (double_quoted_string
+        (escape_sequence)
+        (escape_sequence)))
+    (list_element
+      (list_dash)
+      (double_quoted_string
+        (escape_sequence)
+        (escape_sequence)))))
+
+====================================================================
+kson quoted keys of all three string kinds
+====================================================================
+
+'quoted single': 1
+"quoted double": 2
+unquoted_key: 3
+
+---
+
+(document
+  (plain_object
+    (property
+      (single_quoted_string)
+      (number))
+    (property
+      (double_quoted_string)
+      (number))
+    (property
+      (unquoted_string)
+      (number))))
+
+====================================================================
+kson reserved-word and number-like keys: lenient like the reference parser
+====================================================================
+
+true: 1
+null: 2
+2020-01-01: 'date'
+5: 'five'
+
+---
+
+(document
+  (plain_object
+    (property
+      (true)
+      (number))
+    (property
+      (null)
+      (number))
+    (property
+      (number)
+      (single_quoted_string))
+    (property
+      (number)
+      (single_quoted_string))))
+
+====================================================================
+kson delimited format: braces and angle-bracket dash lists
+====================================================================
+
+{
+  person: {
+    name: 'Leonardo Bonacci'
+    favorite_books: <
+      - {
+          title: Elements
+          author: Euclid
+        }
+      - {
+          title: Metaphysics
+          author: Aristotle
+        }
+    >
+  }
+}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (unquoted_string)
+      (delimited_object
+        (property
+          (unquoted_string)
+          (single_quoted_string))
+        (property
+          (unquoted_string)
+          (delimited_dash_list
+            (list_element
+              (list_dash)
+              (delimited_object
+                (property
+                  (unquoted_string)
+                  (unquoted_string))
+                (property
+                  (unquoted_string)
+                  (unquoted_string))))
+            (list_element
+              (list_dash)
+              (delimited_object
+                (property
+                  (unquoted_string)
+                  (unquoted_string))
+                (property
+                  (unquoted_string)
+                  (unquoted_string))))))))))
+
+====================================================================
+kson compact format: mixed structures, embed before closing brace
+====================================================================
+
+person:{name:'Leonardo Bonacci'nickname:Fibonacci favorite_books:[{title:Elements author:Euclid}{title:Metaphysics author:Aristotle}]favorite_numbers:[[0 1 1 2 '...']'(1 + √5)/2' π]
+favorite_function:%kotlin
+  fun f(): Long {
+    return 0
+  }
+%%}
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (delimited_object
+        (property
+          (unquoted_string)
+          (single_quoted_string))
+        (property
+          (unquoted_string)
+          (unquoted_string))
+        (property
+          (unquoted_string)
+          (bracket_list
+            (delimited_object
+              (property
+                (unquoted_string)
+                (unquoted_string))
+              (property
+                (unquoted_string)
+                (unquoted_string)))
+            (delimited_object
+              (property
+                (unquoted_string)
+                (unquoted_string))
+              (property
+                (unquoted_string)
+                (unquoted_string)))))
+        (property
+          (unquoted_string)
+          (bracket_list
+            (bracket_list
+              (number)
+              (number)
+              (number)
+              (number)
+              (single_quoted_string))
+            (single_quoted_string)
+            (unquoted_string)))
+        (property
+          (unquoted_string)
+          (embed_block
+            (embed_tag)
+            (embed_content)))))))
+
+====================================================================
+kson bracket list of plain objects without commas
+====================================================================
+
+[{title:Elements author:Euclid}{title:Metaphysics author:Aristotle}]
+
+---
+
+(document
+  (bracket_list
+    (delimited_object
+      (property
+        (unquoted_string)
+        (unquoted_string))
+      (property
+        (unquoted_string)
+        (unquoted_string)))
+    (delimited_object
+      (property
+        (unquoted_string)
+        (unquoted_string))
+      (property
+        (unquoted_string)
+        (unquoted_string)))))
+
+====================================================================
+kson empty containers: all three list and object forms
+====================================================================
+
+{a: <> , b: [], c: {}}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (unquoted_string)
+      (delimited_dash_list))
+    (property
+      (unquoted_string)
+      (bracket_list))
+    (property
+      (unquoted_string)
+      (delimited_object))))
+
+====================================================================
+kson comments: own lines, trailing values, inside delimited structures
+====================================================================
+
+# leading comment
+key: value # trailing comment
+other:
+  # comment inside a plain object
+  nested: 1
+{
+  # comment inside a delimited object
+  delimited: 2
+}
+
+---
+
+(document
+  (comment)
+  (plain_object
+    (property
+      (unquoted_string)
+      (unquoted_string))
+    (comment)
+    (property
+      (unquoted_string)
+      (comment)
+      (plain_object
+        (property
+          (unquoted_string)
+          (number)))))
+  (delimited_object
+    (comment)
+    (property
+      (unquoted_string)
+      (number))))
+
+====================================================================
+kson comment documents a list element's value
+====================================================================
+
+- # documents key
+  key: value
+
+---
+
+(document
+  (dash_list
+    (list_element
+      (list_dash)
+      (comment)
+      (plain_object
+        (property
+          (unquoted_string)
+          (unquoted_string))))))
+
+====================================================================
+kson hash inside strings and embed content is not a comment
+====================================================================
+
+hash_in_string: 'this # is not a comment'
+hash_in_embed: %text
+  this # is also not a comment
+  it is embed content
+%%
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (single_quoted_string))
+    (property
+      (unquoted_string)
+      (embed_block
+        (embed_tag)
+        (embed_content)))))
+
+====================================================================
+kson embed block: percent with tag, quotes and %% allowed in tags
+====================================================================
+
+favorite_function: %kotlin
+  /**
+   * doc comment inside embed
+   */
+  fun fibonacci(n: Int): Long {
+    return 0
+  }
+%%
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (embed_block
+        (embed_tag)
+        (embed_content)))))
+
+====================================================================
+kson embed tag with quotes and connection metadata
+====================================================================
+
+sql: %sql "server=10.0.1.174;uid=root;database=company"
+SELECT first_name, last_name, hire_date
+%%
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (embed_block
+        (embed_tag)
+        (embed_content)))))
+
+====================================================================
+kson embed tag may contain %%
+====================================================================
+
+weird: %this tag even has %% in it
+content
+%%
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (embed_block
+        (embed_tag)
+        (embed_content)))))
+
+====================================================================
+kson embed block without a tag
+====================================================================
+
+embed_block: %
+  Free form,
+  multi-line,
+  indent-stripped
+  embedded text block!
+  %%
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (embed_block
+        (embed_content)))))
+
+====================================================================
+kson embed block: empty content and no tag
+====================================================================
+
+empty: %
+%%
+emptyish: %
+%%
+after: 1
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (embed_block))
+    (property
+      (unquoted_string)
+      (embed_block))
+    (property
+      (unquoted_string)
+      (number))))
+
+====================================================================
+kson dollar-delimited embed block
+====================================================================
+
+alternate_embed: $text
+  This embed block is equivalent to a %-delimited block, but here the
+  end-delimiter to escape is "$\$" rather than "%%"
+$$
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (embed_block
+        (embed_tag)
+        (embed_content)))))
+
+====================================================================
+kson embed escapes: percent
+====================================================================
+
+embed_escapes: %
+  Embed end-delimiters are escaped by putting a slash inside them: %\%
+
+  Note that this moves the escaping goalpost: %\\% gives %\% in the output,
+  %\\\% gives %\\% in the output, and so on until an uninterrupted
+  end-delimiter:
+  %%
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (embed_block
+        (embed_content)))))
+
+====================================================================
+kson embed as root value and list element
+====================================================================
+
+%text
+  root embed
+%%
+- %text
+    element embed
+  %%
+
+---
+
+(document
+  (embed_block
+    (embed_tag)
+    (embed_content))
+  (dash_list
+    (list_element
+      (list_dash)
+      (embed_block
+        (embed_tag)
+        (embed_content)))))
+
+====================================================================
+kson indent kept by outdented closer: value is four-space indented
+====================================================================
+
+embed_block: %
+      indented
+  %%
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (embed_block
+        (embed_content)))))
+
+====================================================================
+kson incomplete: unclosed embed block keeps its structure
+====================================================================
+
+a: %sql
+  SELECT 1
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (embed_block
+        (embed_tag)
+        (embed_content)))))
+
+====================================================================
+kson incomplete: unclosed delimited dash list
+====================================================================
+
+items: <
+  - one
+  - two
+
+---
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (delimited_dash_list
+        (list_element
+          (list_dash)
+          (unquoted_string))
+        (list_element
+          (list_dash)
+          (unquoted_string))
+        (MISSING ">")))))
+
+====================================================================
+kson incomplete: unclosed plain object key with no value while typing
+====================================================================
+
+person:
+  name:
+
+---
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (plain_object
+        (property
+          (unquoted_string)
+          (double_quoted_string
+            (MISSING """)))))))
+
+====================================================================
+kson incomplete: dash list element with no value while typing
+====================================================================
+
+- one
+-
+
+---
+(document
+  (dash_list
+    (list_element
+      (list_dash)
+      (unquoted_string))
+    (list_element
+      (list_dash)
+      (double_quoted_string
+        (MISSING """)))))
+
+====================================================================
+kson incomplete: dangling dash at end of file
+====================================================================
+
+-
+
+---
+(document
+  (ERROR
+    (list_dash)))
+
+====================================================================
+kson invalid: stray end-dot and end-dash inside delimited structures
+====================================================================
+
+{a: 1 .}
+< - 1 = >
+
+---
+(document
+  (delimited_object
+    (property
+      (unquoted_string)
+      (number))
+    (ERROR))
+  (delimited_dash_list
+    (list_element
+      (list_dash)
+      (number))
+    (ERROR)))
+
+====================================================================
+kson lenient: consecutive values at root parse; the server reports them
+====================================================================
+
+a: 1
+- x
+'b'
+
+---
+
+(document
+  (plain_object
+    (property
+      (unquoted_string)
+      (number)))
+  (dash_list
+    (list_element
+      (list_dash)
+      (unquoted_string)))
+  (single_quoted_string))

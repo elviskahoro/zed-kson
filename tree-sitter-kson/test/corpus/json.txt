@@ -1,0 +1,385 @@
+====================================================================
+json literals: every JSON literal type as a root document
+====================================================================
+
+null
+
+---
+
+(document
+  (null))
+
+====================================================================
+(true and false)
+====================================================================
+
+true
+
+---
+
+(document
+  (true))
+
+====================================================================
+json numbers: integers, fractions, exponents, negatives
+====================================================================
+
+-273.15
+
+---
+
+(document
+  (number))
+
+====================================================================
+json number zoo inside an array
+====================================================================
+
+[0, 1, -1, 3.14, 2.998e8, 6.02E+23, -1.602176634e-19, 1e10]
+
+---
+
+(document
+  (bracket_list
+    (number)
+    (number)
+    (number)
+    (number)
+    (number)
+    (number)
+    (number)
+    (number)))
+
+====================================================================
+json string with escapes and unicode
+====================================================================
+
+"unicode π, escaped \" quote, \\ backslash, \/ slash, \u0041, tab\t"
+
+---
+
+(document
+  (double_quoted_string
+    (escape_sequence)
+    (escape_sequence)
+    (escape_sequence)
+    (escape_sequence)
+    (escape_sequence)))
+
+====================================================================
+json empty string
+====================================================================
+
+""
+
+---
+
+(document
+  (double_quoted_string))
+
+====================================================================
+json object: simple
+====================================================================
+
+{"name": "Leonardo Bonacci", "nickname": "Fibonacci", "born": 1170, "real": true, "parents": null}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (double_quoted_string)
+      (double_quoted_string))
+    (property
+      (double_quoted_string)
+      (double_quoted_string))
+    (property
+      (double_quoted_string)
+      (number))
+    (property
+      (double_quoted_string)
+      (true))
+    (property
+      (double_quoted_string)
+      (null))))
+
+====================================================================
+json object: nested
+====================================================================
+
+{"person": {"name": "Euclid", "works": [{"title": "Elements", "books": 13}, {"title": "Optics"}]}}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (double_quoted_string)
+      (delimited_object
+        (property
+          (double_quoted_string)
+          (double_quoted_string))
+        (property
+          (double_quoted_string)
+          (bracket_list
+            (delimited_object
+              (property
+                (double_quoted_string)
+                (double_quoted_string))
+              (property
+                (double_quoted_string)
+                (number)))
+            (delimited_object
+              (property
+                (double_quoted_string)
+                (double_quoted_string)))))))))
+
+====================================================================
+json array: nested mixed
+====================================================================
+
+[[1, 2], [3, 4], {"five": 5}, [[]], [null, true, false]]
+
+---
+
+(document
+  (bracket_list
+    (bracket_list
+      (number)
+      (number))
+    (bracket_list
+      (number)
+      (number))
+    (delimited_object
+      (property
+        (double_quoted_string)
+        (number)))
+    (bracket_list
+      (bracket_list))
+    (bracket_list
+      (null)
+      (true)
+      (false))))
+
+====================================================================
+json empty containers
+====================================================================
+
+{"empty_object": {}, "empty_array": []}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (double_quoted_string)
+      (delimited_object))
+    (property
+      (double_quoted_string)
+      (bracket_list))))
+
+====================================================================
+json whitespace: newlines and tabs between tokens
+====================================================================
+
+{
+	"a"	:
+		1,
+	"b" :
+		[ 2,
+			3 ]
+}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (double_quoted_string)
+      (number))
+    (property
+      (double_quoted_string)
+      (bracket_list
+        (number)
+        (number)))))
+
+====================================================================
+json document is one value: number-only and string-only documents
+====================================================================
+
+42
+
+---
+
+(document
+  (number))
+
+====================================================================
+json no commas: commas are optional between properties and elements
+====================================================================
+
+{"a": 1 "b": 2 "c": [1 2 3]}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (double_quoted_string)
+      (number))
+    (property
+      (double_quoted_string)
+      (number))
+    (property
+      (double_quoted_string)
+      (bracket_list
+        (number)
+        (number)
+        (number)))))
+
+====================================================================
+json trailing comma: parses leniently, flagged by the server
+====================================================================
+
+{"a": 1, "b": [1, 2,],}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (double_quoted_string)
+      (number))
+    (property
+      (double_quoted_string)
+      (bracket_list
+        (number)
+        (number)))))
+
+====================================================================
+json redundant commas: parses leniently, flagged by the server
+====================================================================
+
+{,,"a": 1,, "b": 2,,}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (double_quoted_string)
+      (number))
+    (property
+      (double_quoted_string)
+      (number))))
+
+====================================================================
+json number-like key: accepted as a key like the reference parser, flagged by the server
+====================================================================
+
+{"2020-01-01": "needs quotes", 5: "five", 1.5: "x"}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (double_quoted_string)
+      (double_quoted_string))
+    (property
+      (number)
+      (double_quoted_string))
+    (property
+      (number)
+      (double_quoted_string))))
+
+====================================================================
+json reserved-word key: accepted as a key like the reference parser, flagged by the server
+====================================================================
+
+{"true": 1, "null": 2}
+
+---
+
+(document
+  (delimited_object
+    (property
+      (double_quoted_string)
+      (number))
+    (property
+      (double_quoted_string)
+      (number))))
+
+====================================================================
+json incomplete: unclosed object while typing
+====================================================================
+
+{"key": "value", "other":
+
+---
+
+(document
+  (ERROR
+    (property
+      (double_quoted_string)
+      (double_quoted_string))
+    (double_quoted_string)))
+
+====================================================================
+json incomplete: unclosed array while typing
+====================================================================
+
+[1, 2, "three"
+
+---
+
+(document
+  (bracket_list
+    (number)
+    (number)
+    (double_quoted_string)
+    (MISSING "]")))
+
+====================================================================
+json incomplete: unclosed string keeps its structure
+====================================================================
+
+{"key": "half-typed value
+
+---
+
+(document
+  (ERROR
+    (property
+      (double_quoted_string)
+      (double_quoted_string))))
+
+====================================================================
+json incomplete: empty file
+====================================================================
+
+---
+
+(document)
+
+====================================================================
+json invalid: value without a container is still a document
+====================================================================
+
+"just a string"
+
+---
+
+(document
+  (double_quoted_string))
+
+====================================================================
+json invalid: stray closer tokens become error content
+====================================================================
+
+]}
+
+---
+
+(document
+  (ERROR))

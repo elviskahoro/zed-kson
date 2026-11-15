@@ -1,0 +1,11 @@
+{
+  person: {
+    name: 'Leonardo Bonacci'
+    favorite_books: <
+      - {
+          title: Elements
+          author: Euclid
+        }
+    >
+  }
+}
