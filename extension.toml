@@ -6,6 +6,17 @@ authors = ["Elvis Kahoro <elvis@elvis.ai>"]
 description = "KSON language support: language server integration and editing configuration."
 repository = "https://github.com/kson-org/zed-kson"
 
+languages = ["languages/kson"]
+
+[grammars.kson]
+# The grammar sources live in this repository under `path`; Zed clones
+# `repository` at `rev` and builds `path`'s `src/parser.c`. See
+# docs/grammar-registration.md for how this pin was chosen and how to
+# override it with a file:// URL for local development.
+repository = "https://github.com/elviskahoro/zed-kson"
+rev = "953c3159037e82fc21986c88eeb3d05e3ef13e43"
+path = "tree-sitter-kson"
+
 [language_servers.kson-language-server]
 name = "KSON Language Server"
 languages = ["KSON"]

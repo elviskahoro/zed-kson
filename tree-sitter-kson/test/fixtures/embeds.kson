@@ -1,0 +1,20 @@
+sql: %sql "server=10.0.1.174;uid=root;database=company"
+SELECT first_name, last_name
+FROM employees
+WHERE department = 'Sales'
+%%
+ts: %typescript
+function fibonacci(n: number): number {
+  return n < 2 ? n : fibonacci(n - 1) + fibonacci(n - 2);
+}
+%%
+py: %python
+def fib(n):
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+%%
+untyped: %
+  no tag, no injection
+%%
+alternate: $text
+  dollar-delimited
+$$

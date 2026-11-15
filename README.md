@@ -4,7 +4,7 @@ KSON support for Zed. Work in progress.
 
 ## Status
 - Language config and Rust LSP adapter scaffolded; `cargo check --target wasm32-wasip2` passes.
-- **Blocked: Tree-sitter grammar.** None exists in kson-org; `[grammars.kson]` is not yet in `extension.toml`, and highlight/indent/injection queries are pending it.
+- **Tree-sitter grammar landed (WI-2).** Authored in-repo at [`tree-sitter-kson/`](./tree-sitter-kson) (none exists in kson-org; see `docs/compatibility-inventory.md` decision D1), registered under `[grammars.kson]` in `extension.toml`, with `highlights.scm`, `indents.scm` and `injections.scm` under `languages/kson/`. Run `./scripts/check-grammar.sh` to re-verify the grammar, corpus and queries. See [`docs/grammar-registration.md`](./docs/grammar-registration.md) for how the grammar is pinned and how to try it with a Zed dev install.
 - **Blocked: language server distribution.** The KSON server is not published; build it from kson-org/kson (`tooling/language-server-protocol`) and set:
 
 ```json

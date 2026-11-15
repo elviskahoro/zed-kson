@@ -2,11 +2,16 @@ name = "KSON"
 grammar = "kson"
 path_suffixes = ["kson"]
 line_comments = ["# "]
+word_characters = ["-"]
+autoclose_before = ":,}]>"
+tab_size = 2
 brackets = [
   { start = "{", end = "}", close = true, newline = true },
   { start = "[", end = "]", close = true, newline = true },
-  { start = "(", end = ")", close = true, newline = true },
-  { start = "<", end = ">", close = true, newline = false },
-  { start = "\"", end = "\"", close = true, newline = false, not_in = ["string", "comment"] },
-  { start = "'", end = "'", close = true, newline = false, not_in = ["string", "comment"] },
+  { start = "<", end = ">", close = true, newline = true },
+  { start = "(", end = ")", close = true, newline = false, not_in = ["comment", "double_quoted_string", "single_quoted_string", "embed_content"] },
+  { start = "\"", end = "\"", close = true, newline = false, not_in = ["comment", "double_quoted_string", "single_quoted_string", "embed_content"] },
+  { start = "'", end = "'", close = true, newline = false, not_in = ["comment", "double_quoted_string", "single_quoted_string", "embed_content"] },
+  { start = "%", end = "%%", close = true, newline = false, not_in = ["comment", "double_quoted_string", "single_quoted_string", "embed_content"] },
+  { start = "$", end = "$$", close = true, newline = false, not_in = ["comment", "double_quoted_string", "single_quoted_string", "embed_content"] },
 ]

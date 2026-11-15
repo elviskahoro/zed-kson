@@ -1,0 +1,22 @@
+# Kson syntax note: whitespace is NOT significant!
+person:
+  name: 'Leonardo Bonacci'
+  nickname: Fibonacci
+  favorite_books:
+    - title: Elements
+      author: Euclid
+    - title: Metaphysics
+      author: Aristotle
+      .
+  favorite_numbers:
+    - - 0
+      - 1
+      - '...'
+      =
+    - '(1 + √5)/2'
+    - π
+  favorite_function: %kotlin
+    fun fibonacci(n: Int): Long {
+      return 0
+    }
+  %%

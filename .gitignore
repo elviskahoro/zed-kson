@@ -11,3 +11,6 @@ target/
 # Gas City
 .beads/*
 !.beads/identity.toml
+
+# Zed dev-install grammar clones (see docs/grammar-registration.md)
+grammars/

@@ -1,0 +1,6 @@
+person:{name:'Leonardo Bonacci'nickname:Fibonacci favorite_books:[{title:Elements author:Euclid}]favorite_numbers:[[0 1 1 2 '...']'(1 + √5)/2' π]
+favorite_function:%kotlin
+  fun f(): Long {
+    return 0
+  }
+%%}
