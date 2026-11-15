@@ -1,0 +1,70 @@
+# CI for the zed-kson extension (WI-5).
+#
+# Mirrors the local verification commands in the README "Development"
+# section, so a green run here means the same gates pass on a clean
+# checkout:
+#
+#   compile — cargo check --target wasm32-wasip2 (the extension target;
+#             the wasm32-wasip2 target is not installed by default, so
+#             the job adds it first) plus cargo test for the host-side
+#             adapter unit tests.
+#   grammar — scripts/check-grammar.sh: tree-sitter generate freshness
+#             (committed parser must match grammar.js), the full corpus,
+#             and query validity (highlights/indents/injections compile
+#             and capture on the grammar fixtures).
+#   parity  — scripts/check-parity.sh: the static snippet fixtures
+#             always run; the server fixtures print an explicit
+#             DEFERRED disposition in CI because no server bundle is
+#             built here (building one needs JDK/gradle/pnpm — see
+#             README "Local server setup"). Build a bundle locally and
+#             run the script with KSON_SERVER=<bundle> for the full
+#             F1–F28 suite; observed results are recorded in
+#             fixtures/parity/README.md.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: Extension compile (wasm32-wasip2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install wasm32-wasip2 target
+        run: rustup target add wasm32-wasip2
+      - name: cargo check (extension target)
+        run: cargo check --target wasm32-wasip2
+      - name: cargo test (adapter unit tests, host)
+        run: cargo test
+
+  grammar:
+    name: Grammar and query checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install tree-sitter CLI (pinned to the version the checks were validated with; script requires 0.25+)
+        run: npm install -g tree-sitter-cli@0.27.2
+      - name: Grammar, corpus and query checks
+        run: ./scripts/check-grammar.sh
+
+  parity:
+    name: Fixture checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Parity fixtures (static fixtures run; server fixtures carry an explicit deferred disposition without a bundle)
+        run: ./scripts/check-parity.sh
