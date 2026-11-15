@@ -1,0 +1,4 @@
+schemas:
+  - fileMatch:
+      - '**/*.config.kson'
+    schema: 'config.schema.kson'

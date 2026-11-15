@@ -7,17 +7,45 @@
 //! diagnostic source), `enableBundledSchemas`, `bundledSchemas`, and
 //! `bundledMetaSchemas`.
 //!
+//! Bundled schemas are passed **inline**: the server only wires its
+//! `BundledSchemaProvider` when the `bundledSchemas`/`bundledMetaSchemas`
+//! arrays are non-empty (`startKsonServer.ts` at the pin), so the
+//! extension ships the draft-07 metaschema (`schemas/` directory) and
+//! passes its contents in the defaults. `enableBundledSchemas: false`
+//! (a user override) disables the bundled provider at runtime.
+//!
 //! User-provided options are deep-merged over the defaults, so setting
 //! one key (e.g. only `distributionId`) does not silently drop the
-//! defaults of the others.
+//! defaults of the others. Arrays replace the default entirely (they
+//! are not merged element-wise).
 
 use zed_extension_api::serde_json::{json, Value};
+
+/// Schema id of the bundled draft-07 metaschema (matched against a
+/// document's `$schema` content by the server).
+const METASCHEMA_ID: &str = "http://json-schema.org/draft-07/schema#";
+
+/// Display name for the bundled metaschema (surfaces in
+/// `bundled://metaschema/{name}.schema.kson` URIs).
+const METASCHEMA_NAME: &str = "draft-07";
+
+/// The draft-07 metaschema contents, copied verbatim from the upstream
+/// VS Code extension (`tooling/lsp-clients/vscode/schemas/` at the
+/// pin). `.schema.kson` documents that declare this `$schema` are
+/// validated against it without any workspace configuration.
+const METASCHEMA_CONTENT: &str = include_str!("../schemas/metaschema.draft7.kson");
 
 /// Default initialization options for the KSON server.
 pub fn default_initialization_options() -> Value {
     json!({
         "distributionId": "kson",
         "enableBundledSchemas": true,
+        "bundledSchemas": [],
+        "bundledMetaSchemas": [{
+            "schemaId": METASCHEMA_ID,
+            "name": METASCHEMA_NAME,
+            "schemaContent": METASCHEMA_CONTENT,
+        }],
     })
 }
 
@@ -69,10 +97,37 @@ mod tests {
 
     #[test]
     fn no_user_options_yields_the_defaults() {
-        assert_eq!(
-            initialization_options(None),
-            json!({"distributionId": "kson", "enableBundledSchemas": true})
+        let merged = initialization_options(None);
+        assert_eq!(merged["distributionId"], json!("kson"));
+        assert_eq!(merged["enableBundledSchemas"], json!(true));
+        assert_eq!(merged["bundledSchemas"], json!([]));
+        assert_eq!(merged["bundledMetaSchemas"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn defaults_pass_the_bundled_metaschema_inline() {
+        // The server only enables its bundled provider when the arrays
+        // are non-empty, so the metaschema contents must ride along in
+        // the defaults (WI-4; see the module docs).
+        let merged = initialization_options(None);
+        let metaschema = &merged["bundledMetaSchemas"][0];
+        assert_eq!(metaschema["schemaId"], json!(METASCHEMA_ID));
+        assert_eq!(metaschema["name"], json!(METASCHEMA_NAME));
+        assert_eq!(metaschema["schemaContent"], json!(METASCHEMA_CONTENT));
+        assert!(
+            metaschema["schemaContent"].as_str().unwrap().contains("draft-07"),
+            "the shipped metaschema contents must actually be embedded"
         );
+    }
+
+    #[test]
+    fn user_arrays_replace_the_default_bundled_schemas() {
+        let merged = initialization_options(Some(json!({
+            "bundledMetaSchemas": []
+        })));
+        assert_eq!(merged["bundledMetaSchemas"], json!([]),
+            "an explicit user array replaces the default rather than merging");
+        assert_eq!(merged["distributionId"], json!("kson"));
     }
 
     #[test]

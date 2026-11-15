@@ -1,0 +1,17 @@
+person:
+  name: 'Leonardo Bonacci'
+  nickname: Fibonacci
+  favorite_numbers:
+    - 0
+    - 1
+    - '...'
+    =
+  favorite_books:
+    - title: Elements
+      author: Euclid
+      .
+  favorite_function: %kotlin
+    fun fibonacci(n: Int): Long {
+      return 0
+    }
+    %%

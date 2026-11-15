@@ -134,6 +134,14 @@ From `src/startKsonServer.ts:146-207`:
 - Bundled schemas surface as `bundled://schema/{ext}.schema.kson` and
   `bundled://metaschema/{name}.schema.kson` URIs, which VS Code can open via a
   TextDocumentContentProvider (see parity item P8).
+- **WI-4 correction (runtime-verified):** `enableBundledSchemas: true` alone
+  wires nothing — the server only constructs `BundledSchemaProvider` when
+  `bundledSchemas`/`bundledMetaSchemas` arrive **non-empty** with contents
+  inline (`startKsonServer.ts` at the pin). The adapter therefore ships the
+  draft-07 metaschema (`schemas/metaschema.draft7.kson`, copied verbatim from
+  the upstream VS Code extension — Apache-2.0, same license as this repo) and
+  passes it in the default initialization options (`src/config.rs`);
+  fixtures F25–F27 verify attachment and validation.
 
 ## VS Code client parity inventory
 
@@ -149,14 +157,14 @@ dependency changes).
 | P2 | Activation `workspaceContains:**/.kson-schema.kson` | `vscode/package.json:21-22` | adapted | Zed starts the LSP when a `.kson` file opens; schema-only workspaces don't need the server. Accept the difference; document it |
 | P3 | TextMate grammar `source.kson` | `shared/extension/config/kson.tmLanguage.json`; `vscode/package.json:50-76` | blocked | No Tree-sitter grammar exists in kson-org (repo-wide search at pin finds none); see decision D1 — author one in WI-2 |
 | P4 | Language configuration (line comment, brackets, onEnterRules) | `shared/extension/config/language-configuration.json:3,5,29` | adapted | Comment/bracket basics already in `languages/kson/config.toml`; auto-indent rules become Tree-sitter `indents.scm` in WI-2 |
-| P5 | Snippets (`kv`, `embed%`, `embed$`, `list`) | `shared/extension/snippets/kson.code-snippets` | adapted | Convert to Zed snippet format in WI-4 (feature parity); conversion is mechanical |
+| P5 | Snippets (`kv`, `embed%`, `embed$`, `list`) | `shared/extension/snippets/kson.code-snippets` | adopted (WI-4) | Converted to Zed's extension snippet format in `snippets/kson.json` (registered in `extension.toml`); placeholder/escape semantics verified by static fixtures S1–S3 |
 | P6 | `kson.selectSchema` QuickPick schema picker | `vscode/src/client/node/ksonClientMain.ts:91-165` | deferred | Zed extension API 0.7.0 has no arbitrary-QuickPick UI. Zed-native alternative: edit `.kson-schema.kson` directly; server `associateSchema`/`removeSchema` commands stay wire-callable. Document the workflow in README (WI-5) |
 | P7 | Status-bar schema indicator | `src/client/common/StatusBarManager.ts:25-29,45-49` | deferred | No status-bar API for Zed extensions. No Zed-native alternative today; record as known gap. Users get schema feedback via hover/completions/diagnostics |
-| P8 | `bundled://` virtual document provider | `src/client/common/BundledSchemaContentProvider.ts:5-21` | adapted | Zed has no extension content-provider API; go-to-definition into `bundled://` URIs may fail to open (runtime-verify in WI-4). Bundled schema **contents** still work via init options, so validation/completion are unaffected. Document as known limitation |
+| P8 | `bundled://` virtual document provider | `src/client/common/BundledSchemaContentProvider.ts:5-21` | adapted (WI-4-verified) | No extension content-provider API in Zed, and Zed's LSP impl does not support non-file URI schemes (`crates/project/src/lsp_store.rs`: "we don't support non-file URI schemes in our LSP impl") — navigation into `bundled://` URIs cannot open. Contents work via init options: fixtures F25–F27 verify metaschema attachment (`bundled://metaschema/draft-07.schema.kson`) and validation. Known limitation, documented |
 | P9 | Client restart/error policy (3 restarts, then message) | `src/config/clientOptions.ts:11,76-77` | supported | Zed core manages server lifecycle/restart; adapter contributes actionable launch errors (WI-3) |
 | P10 | `kson.trace.server` setting | `vscode/package.json:108-116` | adapted | Zed surfaces LSP traffic via its own logging/dev tools; no per-server trace enum needed |
-| P11 | Middleware injecting editor indentation into format commands | `src/config/clientOptions.ts:57-67` | adapted | `textDocument/formatting` from Zed carries `FormattingOptions` (insertSpaces/tabSize) automatically. Code-lens format buttons get no such injection in Zed (no middleware concept) — best-effort, verify in WI-4 |
-| P12 | Client-side file watching (`synchronize.fileEvents`) | `src/config/clientOptions.ts:53-54` | adapted | The server never dynamically registers watchers itself; it relies on the VS Code client's `synchronize.fileEvents`. Zed only watches files a server registers via `client/registerCapability`, so `.kson-schema.kson` edits may not hot-reload. Verify in WI-4; workaround is reopen/reassociate; candidate upstream contribution |
+| P11 | Middleware injecting editor indentation into format commands | `src/config/clientOptions.ts:57-67` | adapted (WI-4-verified) | `textDocument/formatting` from Zed carries `FormattingOptions` (fixtures F8–F10: 2/8 spaces and tabs honored). Code-lens buttons get no injection in Zed: executing the lens command verbatim applies the server's 2-space default (fixture F15, via `workspace/applyEdit`, which Zed handles). Best-effort as predicted; native format action is primary |
+| P12 | Client-side file watching (`synchronize.fileEvents`) | `src/config/clientOptions.ts:53-54` | deferred (WI-4-verified gap) | The server never dynamically registers watchers (verified: `startKsonServer.ts` at the pin registers only `DidChangeConfigurationNotification`), and Zed only notifies `didChangeWatchedFiles` for server-registered globs (`crates/project/src/lsp_store.rs`). So `.kson-schema.kson` edits do **not** hot-reload in Zed. Server-side reload itself works (fixture F23). Workaround: reopen the document / restart the server; candidate upstream contribution |
 | P13 | User-facing notifications (crash/activation errors) | `ksonClientMain.ts:205-210` | supported | Zed surfaces server stderr and status natively; adapter adds actionable failure messages (WI-3) |
 | P14 | Browser (VS Code Web / web worker server) | `src/client/browser/ksonClientMain.ts` | not applicable | Zed extensions run natively; browser target has no Zed counterpart |
 
@@ -205,29 +213,35 @@ updated with the result.
 
 ## Open decisions and unresolved ambiguities
 
-Each carries a recommended default; none blocks WI-2 from starting.
+Each carries a recommended default; none blocks WI-2 from starting. WI-4
+resolved OQ1–OQ4 as recorded below; OQ5 was resolved by WI-3.
 
-- **OQ1 — Zed pull-diagnostics support.** The server is pull-model only.
-  Recommended default: WI-3 smoke-tests diagnostics with a locally built
-  server; if Zed does not exercise `textDocument/diagnostic` for this server,
-  record it as a hard gap and raise it upstream (request a push path or rely
-  on Zed core support, whichever the runtime evidence shows).
-- **OQ2 — `bundled://` navigation in Zed.** Recommended default: assume
-  go-to-definition into `bundled://` URIs does not open in Zed; WI-4 verifies
-  and the README documents it as a known limitation. Validation/completions
-  from bundled schemas are unaffected.
-- **OQ3 — Schema hot-reload without client-side watching.** Recommended
-  default: WI-4 verifies whether `.kson-schema.kson` edits reload in Zed;
-  workaround is reopen/reassociate, and an upstream contribution (dynamic
-  watcher registration) is the long-term fix.
+- **OQ1 — Zed pull-diagnostics support.** **Resolved (WI-4): supported.**
+  Zed core implements the pull model (`textDocument/diagnostic` via
+  `GetDocumentDiagnostics`, refreshed on `workspace/diagnostic/refresh` —
+  `crates/project/src/lsp_store.rs`), and the server answers pull requests
+  over stdio (fixtures F1–F6, plus WI-3 launch-matrix rows 1–2). In-app
+  rendering is exercised by the WI-5 dev-install smoke test.
+- **OQ2 — `bundled://` navigation in Zed.** **Resolved (WI-4): confirmed
+  limitation.** Zed's LSP implementation does not support non-file URI
+  schemes (source-verified, see P8), so go-to-definition into `bundled://`
+  URIs cannot open. Validation/completions are unaffected (fixtures
+  F25–F27). Documented as a known limitation in the README.
+- **OQ3 — Schema hot-reload without client-side watching.** **Resolved
+  (WI-4): deferred gap with workaround.** Zed only notifies
+  `didChangeWatchedFiles` for server-registered globs and the server never
+  registers watchers (see P12), so `.kson-schema.kson` edits do not
+  hot-reload in Zed. The server-side reload path itself works when a client
+  notifies (fixture F23). Workaround: reopen the document / restart the
+  server; upstream watcher registration is the long-term fix.
 - **OQ4 — Code-lens format buttons without indentation middleware.**
-  Recommended default: treat code-lens formatting as best-effort (server
-  defaults apply); primary formatting is Zed's native format action, which
-  carries `FormattingOptions`. WI-4 documents actual behavior.
-- **OQ5 — Node 24 detection.** The adapter currently does not version-check
-  Node. Recommended default: WI-3 adds an actionable startup failure when
-  `node` is missing or unusably old, rather than silently spawning a broken
-  server.
+  **Resolved (WI-4): best-effort as predicted.** Executing the lens command
+  verbatim (no injected indentation) applies the server's 2-space default
+  via `workspace/applyEdit`, which Zed handles (fixture F14/F15). Native
+  formatting remains primary and honors `FormattingOptions` (F8–F10).
+- **OQ5 — Node 24 detection.** **Resolved (WI-3):** the adapter
+  version-checks every Node candidate and fails with an actionable message
+  (see `docs/launch-matrix.md` rows 5–6).
 
 ## Verification (for this document)
 
@@ -240,3 +254,24 @@ Each carries a recommended default; none blocks WI-2 from starting.
   explicitly marked for runtime verification in WI-3/WI-4).
 - Every open decision carries a recommended default; both required decisions
   (grammar ownership, server distribution) are recorded as adopted defaults.
+
+## WI-4 verification addendum
+
+WI-4 (feature parity) exercised this inventory against the real server
+bundle built from the pin; results and per-fixture expected behavior
+live in `fixtures/parity/README.md`. Summary:
+
+- **Protocol-level fixtures (31 checks): all pass** — diagnostics
+  (F1–F7), formatting incl. indentation preferences, style switch and
+  idempotency (F8–F16), workspace schema association, hover,
+  completion and reload (F17–F24), bundled metaschema (F25–F28),
+  snippet conversion (S1–S3). Run: `KSON_SERVER=<bundle>
+  ./scripts/check-parity.sh`.
+- **Zed-side evidence** is source-verified against Zed at `24d3772`
+  (pull-diagnostics support, `workspace/applyEdit` handling,
+  watched-files policy, non-file-URI limitation) as cited in the rows
+  above; the in-app (GUI) pass is deferred to the WI-5 dev-install
+  smoke test with that explicit disposition.
+- **Adapter change that this exercise forced:** bundled schemas need
+  inline contents (see the WI-4 correction above); `src/config.rs` now
+  ships the metaschema in the defaults, covered by unit tests.

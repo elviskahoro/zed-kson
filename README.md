@@ -5,6 +5,10 @@ KSON support for Zed. Work in progress.
 ## Status
 - Language config and Rust LSP adapter hardened; `cargo check --target wasm32-wasip2` passes and the adapter logic is unit-tested (`cargo test`, 21 tests) — see `docs/launch-matrix.md`.
 - **Tree-sitter grammar landed (WI-2).** Authored in-repo at [`tree-sitter-kson/`](./tree-sitter-kson) (none exists in kson-org; see `docs/compatibility-inventory.md` decision D1), registered under `[grammars.kson]` in `extension.toml`, with `highlights.scm`, `indents.scm` and `injections.scm` under `languages/kson/`. Run `./scripts/check-grammar.sh` to re-verify the grammar, corpus and queries. See [`docs/grammar-registration.md`](./docs/grammar-registration.md) for how the grammar is pinned and how to try it with a Zed dev install.
+- **Feature parity exercised (WI-4).** Diagnostics, formatting, schema
+  features and the bundled metaschema verified against the real server by
+  `./scripts/check-parity.sh`; VS Code-only surfaces carry documented
+  dispositions (`docs/compatibility-inventory.md`, `fixtures/parity/README.md`).
 - **Blocked: language server distribution.** The KSON server is not published as a runnable artifact (see `docs/compatibility-inventory.md` at the upstream pin `928961c`). Build it locally and point the extension at it via `binary.path` (below).
 
 ## Local server setup
@@ -57,8 +61,34 @@ exit; results in `docs/launch-matrix.md`), replacing the earlier
 | `lsp.kson-language-server.binary.path` | Path to a locally built `server.js`. Takes precedence over any future downloaded distribution. Validated at launch: missing paths, directories, and unreadable files each fail with a message naming the setting. |
 | `lsp.kson-language-server.binary.arguments` | Extra arguments passed to the server after `--stdio` (not to `node`). |
 | `lsp.kson-language-server.binary.env` | Extra environment variables for the server. |
-| `lsp.kson-language-server.initialization_options` | Merged (deep, key-by-key) over the defaults `{ "distributionId": "kson", "enableBundledSchemas": true }`; your keys win, unset keys keep defaults. |
-| `lsp.kson-language-server.settings` | Passed to the server as its `"kson"` workspace-configuration section. |
+| `lsp.kson-language-server.initialization_options` | Merged (deep, key-by-key) over the defaults `{ "distributionId": "kson", "enableBundledSchemas": true, "bundledSchemas": [], "bundledMetaSchemas": […draft-07 metaschema, shipped in `schemas/`] }`; your keys win, unset keys keep defaults (arrays replace, not merge). |
+| `lsp.kson-language-server.settings` | Passed to the server as its `"kson"` workspace-configuration section, e.g. `{ "format": { "formattingStyle": "delimited" } }` for delimited output. |
+
+## Feature parity (WI-4)
+
+Diagnostics, formatting (indentation preferences, plain/delimited
+styles, idempotency), schema validation/hover/completion, workspace
+schema association via `.kson-schema.kson`, and the bundled draft-07
+metaschema are exercised against the real server by
+`./scripts/check-parity.sh` (`KSON_SERVER=<bundle>`); expected behavior
+per fixture and all dispositions are documented in
+[`fixtures/parity/README.md`](./fixtures/parity/README.md) and
+[`docs/compatibility-inventory.md`](./docs/compatibility-inventory.md).
+
+Snippet completions for `kv`, `embed%`, `embed$` and `list` ship in
+[`snippets/kson.json`](./snippets/kson.json).
+
+Known limitations (verified, with Zed-native alternatives):
+
+- `.kson-schema.kson` edits do not hot-reload (the server registers no
+  file watchers and Zed only watches server-registered globs); reopen
+  the document or restart the server.
+- Go-to-definition into `bundled://` schema URIs cannot open (Zed's
+  LSP impl supports file URIs only); validation/completions are
+  unaffected.
+- Code-lens format buttons use the server's 2-space default (Zed has
+  no middleware to inject editor indentation); the native format
+  action honors your indentation settings.
 
 ## Future: downloaded server distribution
 
