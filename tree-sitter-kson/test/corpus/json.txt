@@ -317,6 +317,7 @@ json incomplete: unclosed object while typing
 {"key": "value", "other":
 
 ---
+
 (document
   (ERROR
     (property
@@ -331,6 +332,7 @@ json incomplete: unclosed array while typing
 [1, 2, "three"
 
 ---
+
 (document
   (bracket_list
     (number)
@@ -345,6 +347,7 @@ json incomplete: unclosed string keeps its structure
 {"key": "half-typed value
 
 ---
+
 (document
   (ERROR
     (property
