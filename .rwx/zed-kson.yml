@@ -141,6 +141,8 @@ tasks:
       repository: https://github.com/kson-org/kson.git
       ref: ${{ tasks.kson-commit.values.sha }}
       path: kson
+      # kson's Gradle build reads git metadata, so keep the .git directory.
+      preserve-git-dir: true
 
   - key: node24
     use: system-packages
