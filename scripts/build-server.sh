@@ -41,10 +41,15 @@ cd "$KSON_DIR"
 ./gradlew --no-daemon tooling:language-server-protocol:npm_install
 ./gradlew --no-daemon tooling:language-server-protocol:npm_run_compile
 
+# Same pnpm major the upstream Gradle/pixi build uses.
+PNPM=(npx --yes pnpm@11)
 cd tooling/lsp-clients
-npx --yes pnpm@9 install --no-frozen-lockfile
+"${PNPM[@]}" install --no-frozen-lockfile
+# The vscode bundle imports the @kson/lsp-shared workspace package from
+# its compiled dist/, so build it first (upstream's `compile` script).
+"${PNPM[@]}" --filter @kson/lsp-shared run compile
 cd vscode
-npx --yes pnpm@9 exec tsx esbuild.ts --production
+"${PNPM[@]}" exec tsx esbuild.ts --production
 
 STAGE="$OUT_DIR/kson-language-server"
 rm -rf "$STAGE"

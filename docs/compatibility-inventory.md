@@ -36,6 +36,13 @@ pinned revision.
   404 on npm. The `kson` package on npm (0.0.3) belongs to an unrelated project
   (`sakatam/kson`, maintainer sakatam) and is **not** kson-org's KSON library.
   Conclusion: no published, runnable server distribution exists today.
+- **Decision (2026-11-15, issue #8):** this repository builds and hosts the
+  server. `scripts/build-server.sh` produces `server.js` from the commit in
+  `server/KSON_COMMIT`; `.github/workflows/server-release.yml` publishes it
+  as the `kson-language-server.tar.gz` asset on `server-v<version>` releases,
+  and the adapter downloads the pinned version. kson-lib native archives
+  are not needed. If upstream starts publishing a runnable server, switch
+  `PINNED_DISTRIBUTION` to it and retire the release workflow.
 - Build: gradle from the kson repo root; `./gradlew
   tooling:language-server-protocol:npm_install` also builds the Kotlin/JS
   libraries the server links against (`tooling/language-server-protocol/README.md`,

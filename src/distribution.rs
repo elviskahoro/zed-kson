@@ -11,15 +11,13 @@
 //!    version, so repeat launches never redownload and version upgrades
 //!    download exactly once.
 //!
-//! As of the WI-1 upstream pin (2026-11-15) **no runnable server
-//! distribution exists**: `kson-language-server` is a library-only
-//! package with no `bin`, unpublished `link:` dependencies, and nothing
-//! runnable on npm; `kson-lib` native archives are Kotlin library
-//! builds, not server executables, and must never be downloaded as
-//! such. [`PINNED_DISTRIBUTION`] is therefore `None`, and the download
-//! path below is complete, compiled, and unit-tested, but **unexercised
-//! against a real artifact** — it must be exercised and the asset names
-//! confirmed against the actual release the day upstream publishes one.
+//! Upstream kson-org/kson publishes no runnable server, so this
+//! repository builds `server.js` from the commit pinned in
+//! `server/KSON_COMMIT` (`scripts/build-server.sh`) and publishes it as a
+//! GitHub release asset (`.github/workflows/server-release.yml`, tag
+//! `server-v<version>`). The bundle is plain JavaScript, so one asset
+//! serves every platform. `kson-lib` native archives are Kotlin library
+//! builds, not server executables, and are never downloaded.
 
 use std::path::{Path, PathBuf};
 
@@ -35,31 +33,23 @@ pub struct ServerDistribution {
     pub file_type: DownloadedFileType,
 }
 
-/// The pinned server distribution, or `None` while upstream has none.
-pub const PINNED_DISTRIBUTION: Option<ServerDistribution> = None;
+/// The pinned server distribution. `version` is the upstream package
+/// version plus the short upstream commit; bump it together with
+/// `server/KSON_COMMIT` and push the matching `server-v<version>` tag.
+pub const PINNED_DISTRIBUTION: Option<ServerDistribution> = Some(ServerDistribution {
+    version: "0.5.0-dev.0-928961c",
+    base_url: "https://github.com/elviskahoro/zed-kson/releases/download",
+    file_type: DownloadedFileType::GzipTar,
+});
+
+/// The release asset. The bundle is platform-independent JavaScript.
+pub const ASSET: &str = "kson-language-server.tar.gz";
 
 /// Asset name for a platform, or `None` when the platform has no
-/// artifact.
-///
-/// The names follow the release-asset naming convention this extension
-/// will use when upstream publishes; they are placeholders until then
-/// and must be confirmed against the real release (see the module docs).
-pub fn asset_name(os: zed::Os, arch: zed::Architecture) -> Option<&'static str> {
-    match (os, arch) {
-        (zed::Os::Mac, zed::Architecture::Aarch64) => {
-            Some("kson-language-server-aarch64-apple-darwin.tar.gz")
-        }
-        (zed::Os::Mac, zed::Architecture::X8664) => {
-            Some("kson-language-server-x86_64-apple-darwin.tar.gz")
-        }
-        (zed::Os::Linux, zed::Architecture::Aarch64) => {
-            Some("kson-language-server-aarch64-unknown-linux-gnu.tar.gz")
-        }
-        (zed::Os::Linux, zed::Architecture::X8664) => {
-            Some("kson-language-server-x86_64-unknown-linux-gnu.tar.gz")
-        }
-        _ => None,
-    }
+/// artifact. The bundle runs anywhere Node.js 24+ runs, so every
+/// platform Zed supports gets the same asset.
+pub fn asset_name(_os: zed::Os, _arch: zed::Architecture) -> Option<&'static str> {
+    Some(ASSET)
 }
 
 /// The cache layout for one pinned version, rooted at the extension's
@@ -94,7 +84,7 @@ pub fn marker_matches(contents: std::io::Result<String>, version: &str) -> bool 
 
 /// Full download URL for a pinned version on a platform.
 pub fn download_url(base_url: &str, version: &str, asset: &str) -> String {
-    format!("{base_url}/v{version}/{asset}")
+    format!("{base_url}/server-v{version}/{asset}")
 }
 
 /// Resolves the server script: user override first, then the pinned
@@ -239,13 +229,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn asset_names_cover_supported_platforms_only() {
-        assert!(asset_name(zed::Os::Mac, zed::Architecture::Aarch64).is_some());
-        assert!(asset_name(zed::Os::Mac, zed::Architecture::X8664).is_some());
-        assert!(asset_name(zed::Os::Linux, zed::Architecture::Aarch64).is_some());
-        assert!(asset_name(zed::Os::Linux, zed::Architecture::X8664).is_some());
-        assert!(asset_name(zed::Os::Windows, zed::Architecture::X8664).is_none());
-        assert!(asset_name(zed::Os::Linux, zed::Architecture::X86).is_none());
+    fn every_platform_gets_the_platform_independent_asset() {
+        for (os, arch) in [
+            (zed::Os::Mac, zed::Architecture::Aarch64),
+            (zed::Os::Linux, zed::Architecture::X8664),
+            (zed::Os::Windows, zed::Architecture::X8664),
+        ] {
+            assert_eq!(asset_name(os, arch), Some(ASSET));
+        }
+    }
+
+    #[test]
+    fn pinned_distribution_points_at_this_repository_release() {
+        let pinned = PINNED_DISTRIBUTION.expect("a server distribution is pinned");
+        assert_eq!(
+            download_url(pinned.base_url, pinned.version, ASSET),
+            "https://github.com/elviskahoro/zed-kson/releases/download/server-v0.5.0-dev.0-928961c/kson-language-server.tar.gz"
+        );
     }
 
     #[test]
@@ -278,7 +278,7 @@ mod tests {
     fn download_url_interpolates_tag_and_asset() {
         assert_eq!(
             download_url("https://example.com/kson/download", "0.5.0", "server.tgz"),
-            "https://example.com/kson/download/v0.5.0/server.tgz"
+            "https://example.com/kson/download/server-v0.5.0/server.tgz"
         );
     }
 

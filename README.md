@@ -16,7 +16,7 @@ adapter (diagnostics, formatting, schema features).
   `indents.scm` and `injections.scm` under `languages/kson/`.
 - **The LSP adapter is hardened and verified (WI-3).** `cargo check
   --target wasm32-wasip2` passes and the adapter logic is unit-tested
-  (`cargo test`, 24 tests); the launch contract `node <bundle> --stdio`
+  (`cargo test`, 25 tests); the launch contract `node <bundle> --stdio`
   was exercised end-to-end against a real server build — see
   [`docs/launch-matrix.md`](./docs/launch-matrix.md).
 - **Feature parity is exercised (WI-4).** Diagnostics, formatting, schema
@@ -27,12 +27,22 @@ adapter (diagnostics, formatting, schema features).
 - **CI runs all automated gates (WI-5)** on every push and PR:
   extension compile, grammar/query validity, fixture checks
   ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)).
-- **Blocked upstream: language-server distribution.** The KSON server is
-  not published as a runnable artifact (see
-  `docs/compatibility-inventory.md` at the upstream pin `928961c`). Until
-  that changes you build it locally and point the extension at it via
-  `binary.path` (below). Nothing else is blocked: highlighting, indents,
-  injections and snippets work with no server at all.
+- **The language server is downloaded automatically.** Upstream
+  kson-org/kson publishes no runnable server, so this repository builds
+  `server.js` from a pinned upstream commit (`server/KSON_COMMIT`) and
+  publishes it as a GitHub release asset (`server-v<version>` tags,
+  [`.github/workflows/server-release.yml`](./.github/workflows/server-release.yml)).
+  The extension downloads it on first use; `binary.path` still overrides
+  it with a server you build yourself. The full F1–F28 parity suite runs
+  against that same bundle in RWX
+  ([`.rwx/zed-kson.yml`](./.rwx/zed-kson.yml), target `parity`).
+- **Zed's own packager accepts the extension.** RWX builds Zed's
+  `extension_cli` at the commit in `.rwx/ZED_COMMIT` and packages this
+  repository with it (target `package`); target `check` repeats the CI
+  gates. Both pass.
+- **Not yet done:** the interactive in-Zed smoke test
+  ([`docs/dev-install-smoke-test.md`](./docs/dev-install-smoke-test.md))
+  and submission to the Zed extension registry.
 
 ## Installation
 
@@ -41,19 +51,23 @@ is tracked in [`docs/zed-publication-guide.md`](./docs/zed-publication-guide.md)
 submitting that PR is deliberately out of scope). To use it today, install
 it as a dev extension:
 
-1. Build the server bundle (next section) or skip it to use syntax
-   features only.
+1. Install Node.js 24+ (or use a Zed whose bundled Node is 24+).
 2. Open this repository in Zed.
 3. Open the command palette → `zed: extensions page` → **Install Dev
    Extension** (installs from the open repository).
-4. Configure the server as shown under "Local server setup".
+4. Open a `.kson` file. The extension downloads the pinned server bundle
+   once and starts it; nothing else to configure.
 
 The full dev-install walkthrough — including what to verify after
 installing — is [`docs/dev-install-smoke-test.md`](./docs/dev-install-smoke-test.md).
 
-## Local server setup
+## Local server setup (optional override)
 
-The extension launches a server you build yourself:
+By default the extension uses the server bundle published on this
+repository's releases. To run a server you build yourself instead (a
+different upstream revision, local changes), build it and point
+`binary.path` at it; the override always wins. `scripts/build-server.sh`
+runs the same steps against a kson checkout. By hand:
 
 ```bash
 git clone https://github.com/kson-org/kson
@@ -62,8 +76,9 @@ cd kson
 ./gradlew tooling:language-server-protocol:npm_run_compile
 cd tooling/lsp-clients
 pnpm install --no-frozen-lockfile
+pnpm --filter @kson/lsp-shared run compile
 cd vscode
-../node_modules/.bin/tsx esbuild.ts                      # produces dist/server.js
+pnpm exec tsx esbuild.ts --production                    # produces dist/server.js
 ```
 
 Then configure Zed:
@@ -158,18 +173,32 @@ alternatives in `docs/compatibility-inventory.md` (items P6–P14):
 - **Browser/web-worker target**: not applicable — Zed extensions run
   natively (P14).
 
-## Future: downloaded server distribution
+## Server distribution
 
-Once kson-org publishes a runnable server release, the adapter will
-download a pinned version through the Zed extension API into a
-version-keyed cache (repeat launches never redownload; upgrades
-download once and prune stale versions). That path is implemented and
-unit-tested in `src/distribution.rs` but currently unexercised — no
-artifact exists to download — and stays dormant behind
-`PINNED_DISTRIBUTION = None` while your `binary.path` override remains
-the always-works path. Offline/restricted environments and platforms
-without a release asset get defined errors pointing back at
+Upstream does not publish a runnable server, so this repository does.
+`scripts/build-server.sh` builds `server.js` from kson-org/kson at the
+commit in `server/KSON_COMMIT` and packs it, with the upstream
+Apache-2.0 license and a `SOURCE` file naming the commit, into
+`kson-language-server.tar.gz`. The bundle is plain JavaScript, so one
+asset serves every platform.
+
+The adapter pins one version in `PINNED_DISTRIBUTION`
+(`src/distribution.rs`) and downloads
+`releases/download/server-v<version>/kson-language-server.tar.gz` into a
+version-keyed cache inside the extension's work directory. Repeat
+launches never redownload; a version bump downloads once and prunes the
+old version. Offline or restricted networks get an error that points at
 `binary.path`.
+
+To ship a new server version:
+
+1. Update `server/KSON_COMMIT` to the new upstream commit.
+2. Update `PINNED_DISTRIBUTION.version` to `<upstream package version>-<short commit>`.
+3. Run `rwx run .rwx/zed-kson.yml --target parity --wait` (builds the
+   bundle and runs the full parity suite against it).
+4. Merge, then push the tag `server-v<version>` on that commit. The
+   Server release workflow builds, re-runs parity and publishes the asset.
+5. Release a new extension version so users pick up the new pin.
 
 ## Troubleshooting
 

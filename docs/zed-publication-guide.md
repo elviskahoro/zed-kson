@@ -34,16 +34,17 @@ Manifest (`extension.toml`) state:
 
 - [ ] `id`, `name`, `version`, `schema_version`, `description`,
   `authors`, `repository` all present and correct.
-- [ ] **Resolve the `repository` field.** It currently reads
-  `https://github.com/kson-org/zed-kson`, but the git remote this
-  build was developed against is
-  `https://github.com/elviskahoro/zed-kson`, and the
-  `[grammars.kson]` pin points there too. Decide before submission
-  which public repository is canonical (an org repo under kson-org, or
-  the personal one) and make the top-level `repository`,
-  `[grammars.kson].repository` and this repo's remote all agree. This
-  is the one deliberately unresolved decision in this build — recorded
-  here rather than guessed.
+- [x] **`repository` field resolved.** The canonical repository is
+  `https://github.com/elviskahoro/zed-kson` (the old value,
+  `kson-org/zed-kson`, does not exist). The top-level `repository`,
+  `[grammars.kson].repository` and the git remote now agree. If the
+  extension later moves under kson-org, update all three together.
+- [x] License review: this repository is Apache-2.0 (`LICENSE`). The
+  server release asset redistributes kson-org/kson's `server.js`
+  (Apache-2.0) with the upstream `LICENSE` and a `SOURCE` file naming
+  the commit inside the archive, which satisfies Apache-2.0
+  redistribution terms. The bundled draft-07 metaschema notice is in
+  the README "License" section.
 - [ ] `[grammars.kson]` `repository`/`rev`/`path` reference a **public,
   reachable** git repository whose `rev` contains the grammar sources
   under `path` (see
@@ -59,7 +60,7 @@ Content state:
 
 - [ ] `README.md` accurate: setup, runtime requirements, configuration
   reference, feature coverage, parity gaps, troubleshooting.
-- [ ] LICENSE present (Apache-2.0) — required for the extensions
+- [x] LICENSE present (Apache-2.0) — required for the extensions
   listing.
 
 ## Submission steps
