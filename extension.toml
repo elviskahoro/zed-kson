@@ -1,6 +1,6 @@
 id = "kson"
 name = "KSON"
-version = "0.0.1"
+version = "0.1.0"
 schema_version = 1
 authors = ["Elvis Kahoro <elvis@elvis.ai>"]
 description = "KSON language support: language server integration and editing configuration."
