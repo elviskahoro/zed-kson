@@ -25,13 +25,20 @@ command -v tree-sitter >/dev/null 2>&1 || {
 
 cd "$GRAMMAR_DIR"
 
+# Generate into a scratch copy and compare with the committed parser.
+# This does not depend on git, so it also works in checkouts without a
+# .git directory (RWX's git/clone, release tarballs).
 echo "== tree-sitter generate =="
-tree-sitter generate
+SCRATCH="$(mktemp -d)"
+trap 'rm -rf "$SCRATCH"' EXIT
+cp -R "$GRAMMAR_DIR/." "$SCRATCH/"
+(cd "$SCRATCH" && tree-sitter generate)
 
 echo "== committed parser freshness =="
-if ! git -C "$REPO_ROOT" diff --exit-code -- tree-sitter-kson/src/ tree-sitter-kson/grammar.js >/dev/null; then
-  echo "check-grammar: generated files under tree-sitter-kson/ are stale;" \
-       "commit the output of tree-sitter generate" >&2
+if ! diff -r "$GRAMMAR_DIR/src" "$SCRATCH/src" >/dev/null; then
+  echo "check-grammar: generated files under tree-sitter-kson/src are stale;" \
+       "run tree-sitter generate in tree-sitter-kson/ and commit the output" >&2
+  diff -r "$GRAMMAR_DIR/src" "$SCRATCH/src" | head -20 >&2 || true
   exit 1
 fi
 

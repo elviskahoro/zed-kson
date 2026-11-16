@@ -93,8 +93,9 @@ tasks:
       . "$HOME/.cargo/env"
       cd zed
       cargo build --release --locked -p extension_cli
-      cp target/release/zed-extension /tmp/zed-extension
-      /tmp/zed-extension --help
+      # Install outside /tmp so the binary is part of this task's captured layer.
+      sudo install -m 0755 target/release/zed-extension /usr/local/bin/zed-extension
+      zed-extension --help
 
   # Packages this repository's extension with Zed's own tooling. `--source-dir` is the
   # checkout (working directory), so any failure here (bad extension.toml, query that does not compile
@@ -107,9 +108,12 @@ tasks:
     run: |
       set -euo pipefail
       . "$HOME/.cargo/env"
-      rustup target add wasm32-wasip2
+      # The rust task installs Zed's pinned toolchain without setting a default,
+      # and this checkout has no rust-toolchain.toml, so pick stable explicitly.
+      rustup toolchain install stable --profile minimal --target wasm32-wasip2
+      rustup default stable
       mkdir -p /tmp/ext-out /tmp/ext-scratch
-      /tmp/zed-extension \
+      zed-extension \
         --source-dir "$PWD" \
         --output-dir /tmp/ext-out \
         --scratch-dir /tmp/ext-scratch 2>&1 | tee package-output.txt
