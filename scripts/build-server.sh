@@ -44,7 +44,7 @@ cd "$KSON_DIR"
 cd tooling/lsp-clients
 npx --yes pnpm@9 install --no-frozen-lockfile
 cd vscode
-../node_modules/.bin/tsx esbuild.ts --production
+npx --yes pnpm@9 exec tsx esbuild.ts --production
 
 STAGE="$OUT_DIR/kson-language-server"
 rm -rf "$STAGE"

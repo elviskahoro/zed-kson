@@ -1,0 +1,77 @@
+# Builds the KSON language-server bundle from kson-org/kson at the commit
+# pinned in server/KSON_COMMIT, runs the full server-backed parity suite
+# against it, and publishes it as a GitHub release asset that the
+# extension downloads (src/distribution.rs, PINNED_DISTRIBUTION).
+#
+# Trigger by pushing a tag `server-v<version>`, where <version> matches
+# PINNED_DISTRIBUTION.version, or run it manually (manual runs build and
+# test but only publish when `publish` is true and a tag is given).
+#
+# Upstream kson-org/kson publishes no runnable server (see
+# docs/compatibility-inventory.md), so this repository hosts the bundle.
+# The asset is plain JavaScript and platform-independent.
+
+name: Server release
+
+on:
+  push:
+    tags: ["server-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (server-v<version>); required to publish"
+        required: false
+      publish:
+        description: "Publish a GitHub release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read pinned upstream commit
+        id: pin
+        run: echo "sha=$(tr -d '[:space:]' < server/KSON_COMMIT)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: kson-org/kson
+          ref: ${{ steps.pin.outputs.sha }}
+          path: kson
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build server bundle
+        run: ./scripts/build-server.sh kson server-dist
+
+      - name: Full parity suite against the bundle
+        run: KSON_SERVER="$PWD/server-dist/kson-language-server/server.js" ./scripts/check-parity.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kson-language-server
+          path: |
+            server-dist/kson-language-server.tar.gz
+            server-dist/SHA256SUMS
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/server-v') || (inputs.publish && inputs.tag != '')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.tag }}
+          KSON_SHA: ${{ steps.pin.outputs.sha }}
+        run: |
+          gh release create "$TAG" \
+            server-dist/kson-language-server.tar.gz server-dist/SHA256SUMS \
+            --target "$GITHUB_SHA" \
+            --title "KSON language server $TAG" \
+            --notes "server.js built from kson-org/kson@$KSON_SHA (Apache-2.0, license included in the archive). Downloaded by the zed-kson extension; see README \"Language server\"."
