@@ -1,0 +1,120 @@
+# Builds Zed's own extension packager (crates/extension_cli) at the commit pinned in
+# .rwx/ZED_COMMIT and runs it against this repository, so the extension is checked
+# by the same code path Zed and the zed-industries/extensions catalog use: manifest
+# validation, Rust adapter compile to wasm32-wasip2, grammar compile, and every
+# query/snippet/config file parsed against the grammar.
+#
+#   rwx run .rwx/zed-kson.yml --target check --wait     # inner loop: cargo check/test + grammar corpus
+#   rwx run .rwx/zed-kson.yml --target package --wait   # adds Zed's extension_cli validation
+#
+# To test against a newer Zed, change .rwx/ZED_COMMIT. The *-base tasks depend only on
+# that pin, so they run once and are cache hits afterwards.
+
+on:
+  cli:
+    init:
+      commit-sha: ${{ event.git.sha }}
+
+base:
+  image: ubuntu:24.04
+  config: rwx/base 1.2.1
+
+aliases:
+  big-runner: &big-runner
+    cpus: 16
+    disk: 150gb
+
+tasks:
+  - key: code
+    call: git/clone 2.4.1
+    with:
+      repository: https://github.com/elviskahoro/zed-kson.git
+      ref: ${{ init.commit-sha }}
+
+  - key: zed-commit
+    use: code
+    filter: [.rwx/ZED_COMMIT]
+    run: tr -d '[:space:]' < .rwx/ZED_COMMIT | tee "$RWX_VALUES/sha"
+
+  - key: zed-src
+    call: git/clone 2.4.1
+    with:
+      repository: https://github.com/zed-industries/zed.git
+      ref: ${{ tasks.zed-commit.values.sha }}
+      path: zed
+      submodules: false
+
+  # Build dependencies from Zed's script/linux (apt branch, Ubuntu 24.04), minus the
+  # desktop-session packages that only matter for running the app.
+  - key: system-packages
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y --no-install-recommends \
+        gcc g++ build-essential make cmake clang lld llvm \
+        libasound2-dev libfontconfig-dev libgit2-dev libglib2.0-dev libssl-dev \
+        libva-dev libvulkan1 libwayland-dev libx11-xcb-dev libxkbcommon-x11-dev \
+        libzstd-dev libsqlite3-dev libstdc++-14-dev musl-tools musl-dev \
+        elfutils gettext-base jq git curl nodejs npm
+      sudo apt-get clean
+
+  - key: rust
+    use: [system-packages, zed-src]
+    filter: [zed/rust-toolchain.toml]
+    run: |
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --profile minimal --default-toolchain none
+      . "$HOME/.cargo/env"
+      cd zed
+      rustup toolchain install   # reads rust-toolchain.toml
+      rustc --version
+
+  # Fast gates from the repo's own CI. Independent of the Zed build, so they run in
+  # parallel with the base build below.
+  - key: check
+    use: [system-packages, code]
+    run: |
+      set -euo pipefail
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --profile minimal --target wasm32-wasip2
+      . "$HOME/.cargo/env"
+      cargo check --target wasm32-wasip2
+      cargo test
+      sudo npm install -g tree-sitter-cli@0.27.2
+      ./scripts/check-grammar.sh
+      ./scripts/check-parity.sh
+
+  # Builds Zed's extension packager unpatched. Inputs are the pinned commit only, so
+  # this is a cache hit until ZED_COMMIT changes.
+  - key: extension-cli-base
+    use: [zed-src, rust]
+    runner: *big-runner
+    timeout: 90m
+    run: |
+      . "$HOME/.cargo/env"
+      cd zed
+      cargo build --release --locked -p extension_cli
+      cp target/release/zed-extension /tmp/zed-extension
+      /tmp/zed-extension --help
+
+  # Packages this repository's extension with Zed's own tooling. `--source-dir` is the
+  # checkout (working directory), so any failure here (bad extension.toml, query that does not compile
+  # against the grammar, adapter that does not build to wasm) is what Zed itself or the
+  # extensions catalog would reject.
+  - key: package
+    use: [extension-cli-base, code]
+    runner: *big-runner
+    timeout: 60m
+    run: |
+      set -euo pipefail
+      . "$HOME/.cargo/env"
+      rustup target add wasm32-wasip2
+      mkdir -p /tmp/ext-out /tmp/ext-scratch
+      /tmp/zed-extension \
+        --source-dir "$PWD" \
+        --output-dir /tmp/ext-out \
+        --scratch-dir /tmp/ext-scratch 2>&1 | tee package-output.txt
+      ls -la /tmp/ext-out
+    outputs:
+      artifacts:
+        - key: package-output
+          path: package-output.txt
