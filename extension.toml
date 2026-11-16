@@ -21,3 +21,20 @@ path = "tree-sitter-kson"
 [language_servers.kson-language-server]
 name = "KSON Language Server"
 languages = ["KSON"]
+
+# The adapter runs `<node> --version` to gate on Node.js 24+ before
+# launching the server (src/node.rs). Zed only allows process::Command
+# calls the manifest lists; the node path differs per machine (Zed's
+# bundled Node or `node` on PATH), so the command is a wildcard and the
+# arguments are pinned to exactly `--version`.
+[[capabilities]]
+kind = "process:exec"
+command = "*"
+args = ["--version"]
+
+# The server bundle is downloaded from this repository's GitHub releases
+# (src/distribution.rs, PINNED_DISTRIBUTION).
+[[capabilities]]
+kind = "download_file"
+host = "github.com"
+path = ["elviskahoro", "zed-kson", "releases", "download", "**"]
