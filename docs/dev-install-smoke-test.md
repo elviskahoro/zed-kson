@@ -161,8 +161,10 @@ the `server-v0.5.0-dev.0-928961c` release).
 | Missing required properties (F18) | Pass |
 | Schema hover on `appName` (F19) | Pass |
 | Enum completion (F21) | Pass |
-| `editor: format`, snippets (section 4), property completion (F20) | Not checked in this pass |
-| Linux | Not run |
+| `editor: format` (F8) | Pass |
+| `kv` snippet expands (section 4) | Pass |
+| Property completion offers `features` (F20) | Pass |
+| Linux | Not run; the server bundle is platform-independent JS and the RWX `package`/`parity` tasks run on Linux, but no interactive pass yet |
 
 Embedded-language highlighting needs that language's Zed extension
 (Kotlin is not built into Zed); this is expected, not a defect.

@@ -51,7 +51,7 @@ submission; everything else is resolved in this repository.
 | Issue | Disposition | Evidence |
 | --- | --- | --- |
 | #34 CI | Done | `.github/workflows/ci.yml`, `.rwx/zed-kson.yml` (`check`, `package`, `parity` all pass) |
-| #35 Platform smoke tests | **Open** | macOS arm64 passed (`docs/dev-install-smoke-test.md`); formatting, snippets and Linux still to check |
+| #35 Platform smoke tests | Done (macOS arm64) | Full interactive pass recorded in `docs/dev-install-smoke-test.md`; no interactive Linux pass yet |
 | #36 README | Done | `README.md` |
 | #37 License and publication prerequisites | Done | `docs/zed-publication-guide.md` checklist; Apache-2.0 here and upstream |
 | #38 Submit to zed-industries/extensions | **Open** | After #35 passes |
@@ -60,5 +60,5 @@ submission; everything else is resolved in this repository.
 
 Parent and tracking issues are not used: the epics (#1–#5) and the
 hand-off (#41) are closed, and the remaining work is tracked only by the
-leaf issues #35 and #38. The section headings above keep the
+leaf issue #38. The section headings above keep the
 original epic numbers for reference.
