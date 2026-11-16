@@ -48,7 +48,7 @@ adapter (diagnostics, formatting, schema features).
 
 The extension is not yet in the Zed extension listing (publication prep
 is tracked in [`docs/zed-publication-guide.md`](./docs/zed-publication-guide.md);
-submitting that PR is deliberately out of scope). To use it today, install
+the submission steps are documented there). To use it today, install
 it as a dev extension:
 
 1. Install Node.js 24+ (or use a Zed whose bundled Node is 24+).

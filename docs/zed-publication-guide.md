@@ -1,14 +1,14 @@
-# Zed publication guide (WI-5)
+# Zed publication guide
 
-How to prepare this extension for submission to
-[zed-industries/extensions](https://github.com/zed-industries/extensions),
-and how to update the published entry for future versions.
+How to submit this extension to
+[zed-industries/extensions](https://github.com/zed-industries/extensions)
+and how to ship later versions. Based on Zed's published docs
+(<https://zed.dev/docs/extensions/publishing/overview>), which are
+authoritative; re-read them before each submission. Submission is
+reviewed and acceptance is not guaranteed.
 
-**Scope:** preparing the submission (this guide and its checklist) is
-in scope for this build. Actually opening or submitting the PR is
-explicitly out of scope (requirements "Out Of Scope"; plan Non-Goals),
-as is pushing releases or tags. Nothing in this document has been
-submitted anywhere.
+**Status:** not submitted. Opening the PR is a manual, maintainer-run
+step (it publishes to a third-party repository).
 
 ## Prerequisites (must all be true before submitting)
 
@@ -53,8 +53,7 @@ Manifest (`extension.toml`) state:
   the pinned commit must already be pushed. Note: the currently pinned
   `rev` (`953c315`) must exist on the canonical remote — re-pin to the
   publication commit if the grammar moved.
-- [ ] `version` bumped from `0.0.1` for the first published release
-  (and `Cargo.toml` kept in sync).
+- [x] `version` is `0.1.0` in `extension.toml` and `Cargo.toml`.
 
 Content state:
 
@@ -63,47 +62,80 @@ Content state:
 - [x] LICENSE present (Apache-2.0) — required for the extensions
   listing.
 
+## Registry rules that apply
+
+- One extension per PR; at most three open PRs at once; respond to
+  maintainer feedback within 3 weeks or the PR is closed.
+- Extension ID `kson`: kebab-case, unique, no `zed`/`extension`.
+- License must be on Zed's accepted list and sit at the extension root.
+  Apache-2.0 (`LICENSE`) is accepted.
+- Language server extensions must not bundle the server. This extension
+  downloads it from this repository's GitHub releases at runtime
+  (`src/distribution.rs`), which is the sanctioned pattern.
+- Test manually in Zed at the exact commit being submitted.
+
 ## Submission steps
 
-Follow the process published in the
-zed-industries/extensions repository README at submission time — it is
-authoritative and may have changed since this guide was written. The
-shape of the process as of this build:
+1. Make sure `main` is pushed, CI is green, and the submodule commit is
+   on a branch (not detached) of the public HTTPS repository.
+2. Fork `zed-industries/extensions` to the personal account (not an
+   org), so Zed staff can push fixes to the PR. Clone it and run
+   `git submodule init && git submodule update`.
+3. Add this repository as a submodule over HTTPS:
 
-1. Fork `zed-industries/extensions`.
-2. Add a directory for this extension (`extensions/kson/`) containing
-   the manifest stub that repository expects — the fields it requires
-   (name and the source `repository` it should install from, plus the
-   `rev` pin if it asks for one). Confirm the exact required fields
-   against the repository's own documentation; do not invent them.
-3. Open a PR to `zed-industries/extensions` adding the entry.
-4. After merge, the extension becomes installable from Zed's bundled
-   extension listing; update this repo's README "Installation" section
-   to point at the listing instead of dev-install only.
+   ```sh
+   git submodule add https://github.com/elviskahoro/zed-kson.git extensions/kson
+   git add extensions/kson
+   ```
+
+4. Add an entry to the top-level `extensions.toml`. `version` must equal
+   `version` in `extension.toml` at the submodule commit:
+
+   ```toml
+   [kson]
+   submodule = "extensions/kson"
+   version = "0.1.0"
+   ```
+
+5. Run `pnpm sort-extensions` (sorts `extensions.toml` and
+   `.gitmodules`).
+6. Open a PR titled `Add kson extension` against
+   `zed-industries/extensions`. After merge, Zed packages and publishes
+   it. Then update README "Installation" to point at the Zed listing.
 
 ## Update procedure (future versions)
 
-1. Land the changes, keep CI green, re-run the parity suite and the
+Two kinds of release exist and are independent:
+
+- **Server bundle** (`server-v<version>` tags, built by
+  `.github/workflows/server-release.yml`): see the README section on the
+  server distribution. After publishing a new bundle, update
+  `PINNED_DISTRIBUTION` in `src/distribution.rs`, which requires an
+  extension release to reach users.
+- **Extension** (`v<version>` tags): steps below.
+
+1. Land changes with CI green; re-run the parity suite and the
    dev-install smoke test.
-2. Bump `version` in `extension.toml` (and `Cargo.toml`).
-3. If the grammar changed, bump `[grammars.kson]` `rev` to the commit
-   that carries the new grammar (a repo-maintainer push of that commit
-   is a prerequisite — Zed installs the grammar from the pin, not from
-   HEAD).
-4. Push the release commit (and tag it, e.g. `v0.1.0`, if the project
-   adopts tags — this build deliberately created none).
-5. Update the `extensions/kson` entry in the zed-industries/extensions
-   fork to the new `rev` and open a PR there; that update is what
-   propagates the new version and grammar pin to users.
+2. Bump `version` in `extension.toml` and `Cargo.toml`. If the grammar
+   changed, bump `[grammars.kson].rev` to a pushed commit.
+3. Merge to `main`, tag `v<version>`, push the tag.
+4. In the fork of `zed-industries/extensions`, sync with upstream, then:
+
+   ```sh
+   git submodule update --remote extensions/kson
+   ```
+
+   and set the new `version` for `[kson]` in `extensions.toml`. Confirm
+   it matches `extension.toml` at the new submodule commit.
+5. Open a PR (one extension per PR). The merge publishes the update.
+
+`huacnlee/zed-extension-action` can automate steps 4 and 5 if wanted.
 
 ## Known publication-relevant caveats
 
-- The server-distribution blocker (WI-1 decision D2) does not block
-  publication: the extension is fully usable for syntax support
-  without a server, and server-backed features work via the documented
-  local build + `binary.path`. The README says so plainly; the
-  extensions-listing description must not promise downloaded-server
-  functionality.
+- The server is downloaded from this repository's releases, so the
+  listing may describe server-backed features, but they depend on the
+  `server-v*` release asset staying available. Do not delete it.
 - The extension targets `zed_extension_api` 0.7.0; if the extensions
   repo requires a newer API at submission time, bump the dependency
   and re-run the whole gate set first.
