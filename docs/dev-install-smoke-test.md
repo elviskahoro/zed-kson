@@ -10,8 +10,10 @@ executed, so no coverage is claimed that was not tested.
 
 - A clean Zed install (no prior dev install of this extension).
 - Node.js ≥ 24 on PATH (or Zed's bundled Node current enough).
-- The server bundle built per README "Local server setup"
-  (`tooling/lsp-clients/vscode/dist/server.js`).
+- Network access to github.com (the extension downloads the pinned
+  server bundle from this repository's releases on first use). Without
+  it, build the server per README "Local server setup" and set
+  `binary.path`.
 
 ## Procedure
 
@@ -58,8 +60,14 @@ In an empty `.kson` buffer:
 
 ### 5. Server features
 
-Configure `lsp.kson-language-server.binary.path` to the built bundle,
-then:
+Leave `lsp.kson-language-server.binary.path` unset and open any `.kson`
+file:
+
+- [ ] the server starts without configuration: `zed: open log` shows the
+  bundle downloaded once into the extension's `server/<version>/`
+  directory, and a second launch (restart Zed) does not download again.
+
+Then:
 
 - Open `fixtures/parity/documents/invalid_trailing.kson`:
   [ ] exactly one error diagnostic renders ("Unexpected trailing
