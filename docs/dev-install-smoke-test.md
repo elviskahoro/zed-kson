@@ -79,12 +79,28 @@ Then:
   [ ] no diagnostics (F1); run the native format action
   (`editor: format`) — [ ] output honors the editor's indentation
   settings (F8–F10 protocol behavior).
-- Open the `fixtures/parity/workspace/` folder as a workspace, then
-  `schema_valid.config.kson`:
-  [ ] hover on `appName` shows the schema documentation (F19);
-  [ ] completions offer remaining properties and enum values
-  (F20/F21); [ ] `schema_invalid.config.kson` shows "Missing required
-  properties: appName, version" (F18).
+- Schema features. The schema mapping (`.kson-schema.kson`) only applies
+  when its folder is the project root, and the test documents live in
+  `fixtures/parity/documents/`, so combine them in a scratch folder
+  (this mirrors what `scripts/parity_harness.py` does):
+
+  ```bash
+  rm -rf /tmp/kson-schema-test && mkdir -p /tmp/kson-schema-test
+  cp -R fixtures/parity/workspace/. /tmp/kson-schema-test/
+  cp fixtures/parity/documents/*.config.kson /tmp/kson-schema-test/
+  zed /tmp/kson-schema-test
+  ```
+
+  In that window:
+  [ ] `schema_invalid.config.kson` shows "Missing required properties:
+  appName, version" (F18);
+  [ ] in `schema_valid.config.kson`, hover on `appName` shows "Application
+  Name / The name of the application" (F19);
+  [ ] on its empty line 3, ctrl-space offers `features` (F20);
+  [ ] in `features.config.kson`, ctrl-space inside the `""` on line 3
+  offers `logging`, `metrics`, `tracing`, `caching` (F21).
+  The server reads `.kson-schema.kson` at startup, so open the folder
+  fresh rather than adding the file to an open project.
 - Open `fixtures/parity/documents/metaschema_bad.schema.kson`:
   [ ] bundled-metaschema violations render (F27) — proves the bundled
   draft-07 metaschema is wired through the adapter defaults.
