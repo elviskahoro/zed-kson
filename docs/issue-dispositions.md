@@ -56,5 +56,9 @@ submission; everything else is resolved in this repository.
 | #37 License and publication prerequisites | Done | `docs/zed-publication-guide.md` checklist; Apache-2.0 here and upstream |
 | #38 Submit to zed-industries/extensions | **Open** | After #35 passes |
 
-#40 (the original starter prompt) is superseded by this work. #41 (hand-off)
-closes once the smoke test passes.
+#40 (the original starter prompt) is superseded by this work.
+
+Parent and tracking issues are not used: the epics (#1–#5) and the
+hand-off (#41) are closed, and the remaining work is tracked only by the
+leaf issues #19, #35 and #38. The section headings above keep the
+original epic numbers for reference.
