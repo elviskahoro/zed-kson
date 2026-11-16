@@ -122,3 +122,52 @@ tasks:
       artifacts:
         - key: package-output
           path: package-output.txt
+
+  # --- KSON language server -------------------------------------------------
+  # Builds server.js from kson-org/kson at server/KSON_COMMIT (the release asset
+  # the extension downloads) and runs the full server-backed parity suite
+  # (F1-F28) against it.
+  #
+  #   rwx run .rwx/zed-kson.yml --target parity --wait
+
+  - key: kson-commit
+    use: code
+    filter: [server/KSON_COMMIT]
+    run: tr -d '[:space:]' < server/KSON_COMMIT | tee "$RWX_VALUES/sha"
+
+  - key: kson-src
+    call: git/clone 2.4.1
+    with:
+      repository: https://github.com/kson-org/kson.git
+      ref: ${{ tasks.kson-commit.values.sha }}
+      path: kson
+
+  - key: node24
+    use: system-packages
+    run: |
+      set -euo pipefail
+      version="$(curl -fsSL https://nodejs.org/dist/index.json \
+        | jq -r '[.[] | select(.version | startswith("v24."))][0].version')"
+      curl -fsSL "https://nodejs.org/dist/$version/node-$version-linux-x64.tar.xz" \
+        | sudo tar -xJ -C /usr/local --strip-components=1
+      node --version
+
+  - key: server-bundle
+    use: [node24, kson-src, code]
+    runner: *big-runner
+    timeout: 60m
+    run: |
+      set -euo pipefail
+      sudo apt-get update && sudo apt-get install -y --no-install-recommends python3
+      ./scripts/build-server.sh kson server-dist
+      ls -la server-dist
+    outputs:
+      artifacts:
+        - key: kson-language-server
+          path: server-dist/kson-language-server.tar.gz
+        - key: sha256sums
+          path: server-dist/SHA256SUMS
+
+  - key: parity
+    use: server-bundle
+    run: KSON_SERVER="$PWD/server-dist/kson-language-server/server.js" ./scripts/check-parity.sh
