@@ -204,10 +204,25 @@ To ship a new server version:
 
 Every adapter failure names the setting or prerequisite to fix:
 
-- *"no server script configured"* — set `binary.path` (see Local server setup).
+- *"failed to download the server from …"* — you are offline or GitHub is blocked; build the server locally and set `binary.path` (see Local server setup). Once a version has downloaded, it keeps working offline.
 - *"no Node.js runtime found"* / *"Node.js … is vX, but the KSON server requires Node.js 24 or newer"* — install Node 24+ on PATH or update Zed so its bundled Node is current.
 - *"binary.path … does not exist / is not a file / is not readable"* — fix the path or its permissions (`chmod +r`).
-- Launch failures inside Zed (as opposed to resolution failures) show up as the server exiting immediately; check `zed: log` for the adapter's error message.
+- Launch failures inside Zed (as opposed to resolution failures) show up as the server exiting immediately; check the Zed log for the adapter's error message.
+
+Logs and recovery:
+
+- **Zed log:** command palette → `zed: open log`. Adapter errors
+  (download, Node, `binary.path`) are logged here. For live output, start
+  Zed from a terminal with `zed --foreground`.
+- **LSP traffic:** `dev: open language server logs`, then pick
+  `kson-language-server`. This replaces VS Code's `kson.trace.server`
+  setting (inventory P10).
+- **Restart the server:** `editor: restart language server`. Use it after
+  editing `.kson-schema.kson`, since the server does not watch that file
+  (P12). Zed also restarts a crashed server on its own (P9).
+- **Force a fresh download:** remove the `server/` directory inside the
+  extension's work directory (`~/Library/Application Support/Zed/extensions/work/kson`
+  on macOS, `~/.local/share/zed/extensions/work/kson` on Linux) and restart.
 
 See `docs/launch-matrix.md` for the full verification record and
 `docs/compatibility-inventory.md` for the upstream evidence base
