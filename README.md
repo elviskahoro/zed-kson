@@ -16,7 +16,7 @@ adapter (diagnostics, formatting, schema features).
   `indents.scm` and `injections.scm` under `languages/kson/`.
 - **The LSP adapter is hardened and verified (WI-3).** `cargo check
   --target wasm32-wasip2` passes and the adapter logic is unit-tested
-  (`cargo test`, 23 tests); the launch contract `node <bundle> --stdio`
+  (`cargo test`, 24 tests); the launch contract `node <bundle> --stdio`
   was exercised end-to-end against a real server build — see
   [`docs/launch-matrix.md`](./docs/launch-matrix.md).
 - **Feature parity is exercised (WI-4).** Diagnostics, formatting, schema
@@ -104,7 +104,7 @@ exit; results in `docs/launch-matrix.md`).
 | `lsp.kson-language-server.binary.arguments` | Extra arguments passed to the server after `--stdio` (not to `node`). |
 | `lsp.kson-language-server.binary.env` | Extra environment variables for the server. |
 | `lsp.kson-language-server.initialization_options` | Merged (deep, key-by-key) over the defaults `{ "distributionId": "kson", "enableBundledSchemas": true, "bundledSchemas": [], "bundledMetaSchemas": […draft-07 metaschema, shipped in `schemas/`] }`; your keys win, unset keys keep defaults (arrays replace, not merge). |
-| `lsp.kson-language-server.settings` | Passed to the server as its `"kson"` workspace-configuration section, e.g. `{ "format": { "formattingStyle": "delimited" } }` for delimited output. |
+| `lsp.kson-language-server.settings` | Passed to the server under its workspace-configuration section, which is the effective `distributionId` (`"kson"` unless you override it in `initialization_options`), e.g. `{ "format": { "formattingStyle": "delimited" } }` for delimited output. |
 
 ## Feature coverage
 

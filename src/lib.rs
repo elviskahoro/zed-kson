@@ -85,8 +85,11 @@ impl zed::Extension for KsonExtension {
         _id: &LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<Option<serde_json::Value>> {
-        let settings = LspSettings::for_worktree(SERVER_ID, worktree)?.settings;
-        Ok(Some(config::workspace_configuration(settings)))
+        let lsp = LspSettings::for_worktree(SERVER_ID, worktree)?;
+        let section = config::section_name(&config::initialization_options(
+            lsp.initialization_options,
+        ));
+        Ok(Some(config::workspace_configuration(&section, lsp.settings)))
     }
 }
 

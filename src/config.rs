@@ -82,13 +82,29 @@ pub fn initialization_options(user: Option<Value>) -> Value {
     )
 }
 
-/// The workspace configuration section for the server. The KSON server
-/// reads its `didChangeConfiguration` payload from the `"kson"` section
-/// (see `docs/compatibility-inventory.md`, "Workspace configuration").
-pub fn workspace_configuration(settings: Option<Value>) -> Value {
-    json!({
-        "kson": settings.unwrap_or_else(|| Value::Object(Default::default())),
-    })
+/// The configuration section name the server uses: the effective
+/// `distributionId` (upstream `startKsonServer.ts` calls
+/// `getConfiguration(distributionId)` and reads
+/// `didChangeConfiguration` payloads from `settings[distributionId]`).
+/// Falls back to `"kson"` when the id is missing or not a string.
+pub fn section_name(initialization_options: &Value) -> String {
+    initialization_options
+        .get("distributionId")
+        .and_then(Value::as_str)
+        .unwrap_or("kson")
+        .to_string()
+}
+
+/// The workspace configuration for the server: the user's `settings`
+/// wrapped in the server's section (see [`section_name`] and
+/// `docs/compatibility-inventory.md`, "Workspace configuration").
+pub fn workspace_configuration(section: &str, settings: Option<Value>) -> Value {
+    let mut wrapped = zed_extension_api::serde_json::Map::new();
+    wrapped.insert(
+        section.to_string(),
+        settings.unwrap_or_else(|| Value::Object(Default::default())),
+    );
+    Value::Object(wrapped)
 }
 
 #[cfg(test)]
@@ -172,10 +188,22 @@ mod tests {
 
     #[test]
     fn workspace_configuration_wraps_settings_in_the_kson_section() {
-        assert_eq!(workspace_configuration(None), json!({"kson": {}}));
+        assert_eq!(workspace_configuration("kson", None), json!({"kson": {}}));
         assert_eq!(
-            workspace_configuration(Some(json!({"indent": 2}))),
+            workspace_configuration("kson", Some(json!({"indent": 2}))),
             json!({"kson": {"indent": 2}})
         );
+    }
+
+    #[test]
+    fn section_follows_the_effective_distribution_id() {
+        assert_eq!(section_name(&initialization_options(None)), "kson");
+        let custom = initialization_options(Some(json!({"distributionId": "custom"})));
+        assert_eq!(section_name(&custom), "custom");
+        assert_eq!(
+            workspace_configuration(&section_name(&custom), Some(json!({"a": 1}))),
+            json!({"custom": {"a": 1}})
+        );
+        assert_eq!(section_name(&json!({"distributionId": 3})), "kson");
     }
 }

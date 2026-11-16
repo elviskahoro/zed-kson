@@ -98,7 +98,7 @@ Executed and verified (this build, on the WI-5 worktree commit):
 | Evidence | Command / source | Result |
 | --- | --- | --- |
 | Extension compile gate | `cargo check --target wasm32-wasip2` | Pass |
-| Adapter unit tests (23) | `cargo test` | Pass |
+| Adapter unit tests (24) | `cargo test` | Pass |
 | Grammar: generate freshness, corpus, query validity | `./scripts/check-grammar.sh` | Pass |
 | Static snippet fixtures S1–S3 | `./scripts/check-parity.sh` (no bundle) | Pass (server fixtures print explicit DEFERRED) |
 | Full server-backed suite F1–F28 | `KSON_SERVER=<bundle> ./scripts/check-parity.sh` (WI-4 record) | All 31 pass — recorded in `fixtures/parity/README.md` |

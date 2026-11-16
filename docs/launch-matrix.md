@@ -16,7 +16,7 @@ Two verification levels are used, and each row states which applies:
   install` in `tooling/lsp-clients`, then `tsx esbuild.ts`; see
   README "Local server setup").
 - **Unit** — the adapter's resolution/gate logic is pure and covered by
-  `cargo test` (21 tests); the row's observable behavior is the tested
+  `cargo test` (24 tests); the row's observable behavior is the tested
   error string or decision. Full Zed-side reproduction requires the
   Zed extension host, so the procedure for the Zed dev-extension run
   is documented per row.
