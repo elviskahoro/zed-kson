@@ -143,3 +143,27 @@ Before publication, run this procedure end-to-end in a clean Zed
 install and check every box; the publication guide
 (`docs/zed-publication-guide.md`) lists this as a blocking
 prerequisite.
+
+## Interactive pass: macOS arm64 (2026-11-15)
+
+Run by hand in Zed 1.28.1 on macOS 26.5.2 (arm64), Node v26.2.0, from a
+dev install of `main`, with `binary.path` unset (server downloaded from
+the `server-v0.5.0-dev.0-928961c` release).
+
+| Check | Result |
+| --- | --- |
+| `.kson` recognized, language shows KSON (#19) | Pass |
+| Highlighting, comment toggle, brackets, indentation (section 3) | Pass |
+| Server starts with no configuration | Pass |
+| Trailing-content error (F3/F5) | Pass |
+| Error + misleading-indentation warning (F4/F6) | Pass |
+| Bundled metaschema hover on `config.schema.kson` (F25) | Pass |
+| Missing required properties (F18) | Pass |
+| Schema hover on `appName` (F19) | Pass |
+| Enum completion (F21) | Pass |
+| `editor: format`, snippets (section 4), property completion (F20) | Not checked in this pass |
+| Linux | Not run |
+
+Embedded-language highlighting needs that language's Zed extension
+(Kotlin is not built into Zed); this is expected, not a defect.
+

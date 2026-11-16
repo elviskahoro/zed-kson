@@ -20,7 +20,7 @@ submission; everything else is resolved in this repository.
 | #10–#14 Grammar skeleton, scalars, structures, embeds, corpus | Done | `tree-sitter-kson/`, 58 corpus tests, `scripts/check-grammar.sh` |
 | #15 Register pinned grammar | Done | `[grammars.kson]` in `extension.toml`; Zed's `extension_cli` builds it (RWX target `package`) |
 | #16 highlights.scm, #17 indents/brackets, #18 injections | Done | `languages/kson/*.scm`, compiled and matched by `check-grammar.sh` |
-| #19 Verify `.kson` recognition and manual selection in Zed | **Open** | Needs the interactive smoke test (`docs/dev-install-smoke-test.md`) |
+| #19 Verify `.kson` recognition and manual selection in Zed | Done | Interactive pass on macOS arm64, `docs/dev-install-smoke-test.md` |
 
 ## LSP integration (#3)
 
@@ -51,7 +51,7 @@ submission; everything else is resolved in this repository.
 | Issue | Disposition | Evidence |
 | --- | --- | --- |
 | #34 CI | Done | `.github/workflows/ci.yml`, `.rwx/zed-kson.yml` (`check`, `package`, `parity` all pass) |
-| #35 Platform smoke tests | **Open** | Needs a person running Zed |
+| #35 Platform smoke tests | **Open** | macOS arm64 passed (`docs/dev-install-smoke-test.md`); formatting, snippets and Linux still to check |
 | #36 README | Done | `README.md` |
 | #37 License and publication prerequisites | Done | `docs/zed-publication-guide.md` checklist; Apache-2.0 here and upstream |
 | #38 Submit to zed-industries/extensions | **Open** | After #35 passes |
@@ -60,5 +60,5 @@ submission; everything else is resolved in this repository.
 
 Parent and tracking issues are not used: the epics (#1–#5) and the
 hand-off (#41) are closed, and the remaining work is tracked only by the
-leaf issues #19, #35 and #38. The section headings above keep the
+leaf issues #35 and #38. The section headings above keep the
 original epic numbers for reference.
